@@ -56,7 +56,7 @@ public class OpenApiConfig {
                 .build();
     }
 
-    /*
+
     // ⏳ PASO 3: Si appointments funciona, probar medical
     @Bean
     public GroupedOpenApi medicalApi() {
@@ -65,9 +65,9 @@ public class OpenApiConfig {
                 .pathsToMatch("/api/medical-records/**", "/api/prescriptions/**")
                 .build();
     }
-    */
+ 
 
-    /*
+
     // ⏳ PASO 4: Si medical funciona, probar admin
     @Bean
     public GroupedOpenApi adminApi() {
@@ -76,9 +76,8 @@ public class OpenApiConfig {
                 .pathsToMatch("/api/dashboard/**", "/api/analytics/**", "/api/settings/**")
                 .build();
     }
-    */
 
-    /*
+
     // ⏳ PASO 5: Si admin funciona, probar hospital-api general
     @Bean
     public GroupedOpenApi publicApi() {
@@ -88,5 +87,5 @@ public class OpenApiConfig {
                 .packagesToScan("com.hospital.backend")
                 .build();
     }
-    */
+
 }
