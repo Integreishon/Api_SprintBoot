@@ -11,7 +11,7 @@ import com.hospital.backend.chatbot.dto.response.ConversationResponse;
 import com.hospital.backend.chatbot.dto.response.KnowledgeBaseEntryResponse;
 import com.hospital.backend.chatbot.dto.response.KnowledgeBaseReferenceResponse;
 import com.hospital.backend.chatbot.entity.ChatbotConversation;
-import com.hospital.backend.chatbot.entity.ChatbotKnowledgeBase;
+
 import com.hospital.backend.chatbot.repository.ChatbotConversationRepository;
 import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
@@ -346,6 +346,7 @@ public class ChatbotService {
     /**
      * Parsear JSON a mapa
      */
+    @SuppressWarnings("unchecked")
     private Map<String, Object> parseJsonToMap(String json) {
         if (json == null || json.isEmpty()) {
             return Collections.emptyMap();

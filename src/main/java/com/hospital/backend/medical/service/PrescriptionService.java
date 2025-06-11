@@ -8,6 +8,7 @@ import com.hospital.backend.medical.repository.PrescriptionRepository;
 import com.hospital.backend.medical.repository.MedicalRecordRepository;
 import com.hospital.backend.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PrescriptionService {
 
     private final PrescriptionRepository prescriptionRepository;
@@ -73,6 +75,7 @@ public class PrescriptionService {
     public ResponseEntity<byte[]> generatePdf(Long id) {
         Prescription prescription = prescriptionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Prescripción no encontrada"));
+        log.debug("Generando PDF para prescripción: {}", prescription.getId());
         
         // TODO: Implementar generación de PDF
         byte[] pdfContent = new byte[0]; // Placeholder

@@ -1,7 +1,6 @@
 package com.hospital.backend.payment.dto;
 
-import com.hospital.backend.enums.PaymentMethodType;
-import com.hospital.backend.enums.PaymentStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

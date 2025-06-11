@@ -10,15 +10,14 @@ import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.user.entity.Doctor;
-import com.hospital.backend.user.entity.DoctorSchedule;
+import com.hospital.backend.user.entity.DoctorAvailability;
 import com.hospital.backend.user.repository.DoctorRepository;
-import com.hospital.backend.user.repository.DoctorScheduleRepository;
+import com.hospital.backend.user.repository.DoctorAvailabilityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -41,7 +40,7 @@ public class AvailabilityService {
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
-    private final DoctorScheduleRepository doctorScheduleRepository;
+    private final DoctorAvailabilityRepository doctorAvailabilityRepository;
     private final SpecialtyRepository specialtyRepository;
 
     /**
@@ -57,28 +56,29 @@ public class AvailabilityService {
             return false;
         }
 
-        // Buscar doctor y especialidad
+        // Buscar doctor
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        log.debug("Verificando disponibilidad para doctor: {}", doctor.getFirstName());
 
         // Verificar que el doctor trabaja ese día de la semana
-        DayOfWeek dayOfWeek = date.getDayOfWeek();
-        boolean worksThatDay = doctorScheduleRepository.existsByDoctorIdAndDayOfWeek(doctorId, dayOfWeek);
-        if (!worksThatDay) {
-            return false;
-        }
+        int dayOfWeek = date.getDayOfWeek().getValue(); // 1=Lunes, 7=Domingo
+        // Ajustar para que coincida con la BD (1=Lunes, 6=Sábado)
+        if (dayOfWeek == 7) dayOfWeek = 0; // Domingo = 0, pero no trabajan domingos
+        if (dayOfWeek == 0) return false; // No trabajan domingos
 
-        // Verificar horario del doctor
-        List<DoctorSchedule> schedules = doctorScheduleRepository.findByDoctorIdAndDayOfWeek(doctorId, dayOfWeek);
-        if (schedules.isEmpty()) {
+        List<DoctorAvailability> availabilities = doctorAvailabilityRepository
+                .findByDoctorIdAndDayOfWeekAndIsActive(doctorId, dayOfWeek, true);
+        
+        if (availabilities.isEmpty()) {
             return false;
         }
 
         // Verificar si la hora está dentro del horario del doctor
-        boolean withinSchedule = schedules.stream()
-                .anyMatch(schedule -> 
-                        !startTime.isBefore(schedule.getStartTime()) && 
-                        !startTime.isAfter(schedule.getEndTime().minusMinutes(30))); // Al menos 30 min antes de terminar
+        boolean withinSchedule = availabilities.stream()
+                .anyMatch(availability -> 
+                        !startTime.isBefore(availability.getStartTime()) && 
+                        !startTime.isAfter(availability.getEndTime().minusMinutes(30))); // Al menos 30 min antes de terminar
 
         if (!withinSchedule) {
             return false;
@@ -131,6 +131,7 @@ public class AvailabilityService {
         // Buscar doctor y especialidad
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
+        log.debug("Verificando disponibilidad para doctor: {}", doctor.getFirstName());
 
         Specialty specialty = specialtyRepository.findById(request.getSpecialtyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad", "id", request.getSpecialtyId()));
@@ -151,11 +152,14 @@ public class AvailabilityService {
         }
 
         // Obtener horario del doctor para ese día
-        DayOfWeek dayOfWeek = request.getDate().getDayOfWeek();
-        List<DoctorSchedule> schedules = doctorScheduleRepository.findByDoctorIdAndDayOfWeek(
-                request.getDoctorId(), dayOfWeek);
+        int dayOfWeek = request.getDate().getDayOfWeek().getValue(); // 1=Lunes, 7=Domingo
+        // Ajustar para que coincida con la BD (1=Lunes, 6=Sábado)
+        if (dayOfWeek == 7) dayOfWeek = 0; // Domingo = 0, pero no trabajan domingos
         
-        if (schedules.isEmpty()) {
+        List<DoctorAvailability> availabilities = doctorAvailabilityRepository
+                .findByDoctorIdAndDayOfWeekAndIsActive(request.getDoctorId(), dayOfWeek, true);
+        
+        if (availabilities.isEmpty()) {
             // El doctor no trabaja ese día
             return buildEmptyResponse(request, doctor, specialty, slotDuration);
         }
@@ -174,12 +178,12 @@ public class AvailabilityService {
         List<AvailableSlotResponse.TimeSlot> availableSlots = new ArrayList<>();
 
         // Para cada horario del doctor en ese día
-        for (DoctorSchedule schedule : schedules) {
+        for (DoctorAvailability availability : availabilities) {
             // Hora de inicio
-            LocalTime startTime = schedule.getStartTime();
+            LocalTime startTime = availability.getStartTime();
             
             // Hora de fin
-            LocalTime endTime = schedule.getEndTime();
+            LocalTime endTime = availability.getEndTime();
             
             // Filtrar por horarios específicos si se proporcionaron
             if (request.getStartHour() != null) {
@@ -285,4 +289,4 @@ public class AvailabilityService {
         
         return response;
     }
-} 
+}

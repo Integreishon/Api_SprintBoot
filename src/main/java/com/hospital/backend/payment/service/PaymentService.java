@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -247,6 +248,10 @@ public class PaymentService {
                     case ONLINE:
                         onlinePayments = onlinePayments.add(amount);
                         break;
+                    default:
+                        // Para OTHER u otros tipos no especificados
+                        onlinePayments = onlinePayments.add(amount);
+                        break;
                 }
                 
                 completedCount++;
@@ -264,7 +269,7 @@ public class PaymentService {
         
         // Calcular promedio por transacción
         BigDecimal averageAmount = completedCount > 0 ? 
-                totalRevenue.divide(new BigDecimal(completedCount), BigDecimal.ROUND_HALF_UP) : 
+                totalRevenue.divide(new BigDecimal(completedCount), RoundingMode.HALF_UP) : 
                 BigDecimal.ZERO;
         
         // Crear y retornar el resumen

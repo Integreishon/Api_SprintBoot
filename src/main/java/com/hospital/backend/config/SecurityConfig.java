@@ -35,13 +35,30 @@ public class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Autenticación pública
                 .requestMatchers("/api/auth/**").permitAll()
+                
+                // Catálogos públicos
                 .requestMatchers("/api/document-types/**").permitAll()
                 .requestMatchers("/api/specialties/**").permitAll()
                 .requestMatchers("/api/payment-methods/**").permitAll()
+                
+                // Chatbot público
                 .requestMatchers("/api/chatbot/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
+                
+                // Swagger UI y documentación - CON Y SIN /api prefix
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/swagger-ui/**", "/api/swagger-ui.html").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
+                .requestMatchers("/api/v3/api-docs/**", "/api/v3/api-docs").permitAll()
+                .requestMatchers("/swagger-resources/**").permitAll()
+                .requestMatchers("/webjars/**").permitAll()
+                
+                // Actuator - CON Y SIN /api prefix
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/api/actuator/**").permitAll()
+                
+                // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

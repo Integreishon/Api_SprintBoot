@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+
 
 /**
  * Entidad para el registro de auditoría de acciones en el sistema

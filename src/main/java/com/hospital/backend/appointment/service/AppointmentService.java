@@ -25,7 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -63,6 +63,7 @@ public class AppointmentService {
     public PageResponse<AppointmentResponse> findByPatient(Long patientId, Pageable pageable) {
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente", "id", patientId));
+        log.debug("Consultando citas para paciente: {}", patient.getFirstName());
 
         Page<Appointment> appointments = appointmentRepository.findByPatientId(patientId, pageable);
         Page<AppointmentResponse> appointmentResponses = appointments.map(this::mapToAppointmentResponse);
@@ -73,6 +74,7 @@ public class AppointmentService {
     public PageResponse<AppointmentResponse> findByDoctor(Long doctorId, Pageable pageable) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        log.debug("Consultando citas para doctor: {}", doctor.getFirstName());
 
         Page<Appointment> appointments = appointmentRepository.findByDoctorId(doctorId, pageable);
         Page<AppointmentResponse> appointmentResponses = appointments.map(this::mapToAppointmentResponse);
@@ -100,9 +102,11 @@ public class AppointmentService {
         // Obtener entidades relacionadas
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente", "id", request.getPatientId()));
+        log.debug("Paciente encontrado: {}", patient.getFirstName());
 
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
+        log.debug("Doctor encontrado: {}", doctor.getFirstName());
 
         Specialty specialty = specialtyRepository.findById(request.getSpecialtyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad", "id", request.getSpecialtyId()));

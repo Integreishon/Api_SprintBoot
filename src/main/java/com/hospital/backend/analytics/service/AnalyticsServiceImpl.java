@@ -2,15 +2,12 @@ package com.hospital.backend.analytics.service;
 
 import com.hospital.backend.analytics.dto.AnalyticsRequest;
 import com.hospital.backend.analytics.dto.AnalyticsResponse;
-import com.hospital.backend.analytics.entity.AnalyticsCache;
 import com.hospital.backend.analytics.repository.AnalyticsCacheRepository;
-import com.hospital.backend.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor

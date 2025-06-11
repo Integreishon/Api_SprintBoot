@@ -34,12 +34,12 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtProperties.getExpirationTime());
         
         return Jwts.builder()
-                .setSubject(String.valueOf(user.getId()))
+                .subject(String.valueOf(user.getId()))
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .setIssuer(jwtProperties.getIssuer())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .issuer(jwtProperties.getIssuer())
                 .signWith(getKey())
                 .compact();
     }

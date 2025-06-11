@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Entity
 @Table(name = "specialties")
@@ -46,6 +47,6 @@ public class Specialty extends BaseEntity {
         BigDecimal discountFactor = BigDecimal.ONE.subtract(
                 discountPercentage.divide(new BigDecimal("100")));
         
-        return consultationPrice.multiply(discountFactor).setScale(2, BigDecimal.ROUND_HALF_UP);
+        return consultationPrice.multiply(discountFactor).setScale(2, RoundingMode.HALF_UP);
     }
 }

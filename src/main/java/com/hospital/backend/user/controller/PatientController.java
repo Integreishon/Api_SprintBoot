@@ -7,7 +7,7 @@ import com.hospital.backend.user.dto.request.UpdatePatientRequest;
 import com.hospital.backend.user.dto.response.PatientResponse;
 import com.hospital.backend.user.service.PatientService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;

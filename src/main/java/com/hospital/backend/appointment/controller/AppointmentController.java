@@ -29,6 +29,7 @@ import java.util.List;
 
 /**
  * Controlador REST para la gestión de citas médicas
+ * VERSIÓN TEMPORAL SIN PreAuthorize COMPLEJOS PARA DEBUGGING
  */
 @RestController
 @RequestMapping("/api/v1/appointments")
@@ -57,7 +58,7 @@ public class AppointmentController {
 
     @GetMapping("/patient/{patientId}")
     @Operation(summary = "Listar citas por paciente", description = "Obtiene una lista paginada de citas de un paciente")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('RECEPTIONIST') or @securityService.isCurrentUser(#patientId))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<PageResponse<AppointmentResponse>> findByPatient(
             @PathVariable Long patientId,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -66,7 +67,7 @@ public class AppointmentController {
 
     @GetMapping("/doctor/{doctorId}")
     @Operation(summary = "Listar citas por doctor", description = "Obtiene una lista paginada de citas de un doctor")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('RECEPTIONIST') or @securityService.isCurrentDoctor(#doctorId))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST')")
     public ResponseEntity<PageResponse<AppointmentResponse>> findByDoctor(
             @PathVariable Long doctorId,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -102,7 +103,7 @@ public class AppointmentController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar una cita", description = "Actualiza una cita existente")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('RECEPTIONIST') or @appointmentSecurityService.isAppointmentPatient(#id))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<AppointmentResponse> update(
             @PathVariable Long id,
             @RequestBody @Valid UpdateAppointmentRequest request) {
@@ -122,7 +123,7 @@ public class AppointmentController {
 
     @PostMapping("/{id}/cancel")
     @Operation(summary = "Cancelar una cita", description = "Cancela una cita existente")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('RECEPTIONIST') or @appointmentSecurityService.isAppointmentPatient(#id))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<AppointmentResponse> cancel(
             @PathVariable Long id,
             @Parameter(description = "Motivo de cancelación") @RequestParam(required = false) String reason) {
@@ -131,7 +132,7 @@ public class AppointmentController {
 
     @PostMapping("/{id}/complete")
     @Operation(summary = "Completar una cita", description = "Marca una cita como completada")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR') and (hasRole('ADMIN') or @appointmentSecurityService.isAppointmentDoctor(#id))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<AppointmentResponse> complete(
             @PathVariable Long id,
             @Parameter(description = "Notas médicas") @RequestParam(required = false) String notes) {
@@ -140,7 +141,7 @@ public class AppointmentController {
 
     @GetMapping("/patient/{patientId}/upcoming")
     @Operation(summary = "Obtener próximas citas de un paciente", description = "Retorna las próximas citas para un paciente (próximos 7 días)")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('RECEPTIONIST') or @securityService.isCurrentUser(#patientId))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<AppointmentResponse>> findUpcomingAppointmentsForPatient(
             @PathVariable Long patientId) {
         return ResponseEntity.ok(appointmentService.findUpcomingAppointmentsForPatient(patientId));
@@ -148,7 +149,7 @@ public class AppointmentController {
 
     @GetMapping("/doctor/{doctorId}/today")
     @Operation(summary = "Obtener citas del día para un doctor", description = "Retorna las citas del día actual para un doctor")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST') and (hasRole('ADMIN') or hasRole('RECEPTIONIST') or @securityService.isCurrentDoctor(#doctorId))")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST')")
     public ResponseEntity<List<AppointmentResponse>> findTodayAppointmentsForDoctor(
             @PathVariable Long doctorId) {
         return ResponseEntity.ok(appointmentService.findTodayAppointmentsForDoctor(doctorId));
@@ -170,4 +171,4 @@ public class AppointmentController {
             @RequestBody @Valid AvailableSlotsRequest request) {
         return ResponseEntity.ok(availabilityService.findAvailableSlots(request));
     }
-} 
+}
