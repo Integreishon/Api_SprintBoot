@@ -15,7 +15,7 @@ API RESTful para la gestión integral de un hospital, incluyendo citas, paciente
 
 ## 🛠️ Tecnologías
 
-- **Backend:** Java 11, Spring Boot 2.7.x
+- **Backend:** Java 17, Spring Boot 3.4.6
 - **Base de Datos:** PostgreSQL 13+
 - **Seguridad:** JWT, Spring Security
 - **Documentación:** OpenAPI 3 (Swagger)
@@ -27,7 +27,7 @@ API RESTful para la gestión integral de un hospital, incluyendo citas, paciente
 
 ### Requisitos Previos
 
-- Java 11+
+- Java 17+
 - Maven 3.6+
 - PostgreSQL 13+
 

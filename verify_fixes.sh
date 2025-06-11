@@ -47,7 +47,7 @@ check_file_contains() {
 echo ""
 echo "1. Verificando configuración de propiedades JWT..."
 check_file_contains "src/main/resources/application.properties" "app.jwt.secret" "Propiedades JWT actualizadas"
-check_file_not_contains "src/main/resources/application.properties" "jwt.secret" "Propiedades JWT antiguas removidas"
+check_file_not_contains "src/main/resources/application.properties" "^jwt\.secret" "Propiedades JWT antiguas removidas"
 
 echo ""
 echo "2. Verificando JwtProperties.java..."
