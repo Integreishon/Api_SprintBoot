@@ -14,18 +14,8 @@ import java.time.LocalDateTime;
 public class AuthResponse {
     
     private String token;
-    private String tokenType = "Bearer";
     private Long userId;
     private String email;
     private UserRole role;
     private LocalDateTime expiresAt;
-    
-    public AuthResponse(String token, Long userId, String email, UserRole role, LocalDateTime expiresAt) {
-        this.token = token;
-        this.userId = userId;
-        this.email = email;
-        this.role = role;
-        this.expiresAt = expiresAt;
-    }
-    
 }

@@ -11,4 +11,8 @@ public class ValidationException extends RuntimeException {
         super(String.format("Validación fallida para campo '%s' con valor '%s': %s", 
             field, value, reason));
     }
+    
+    public ValidationException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

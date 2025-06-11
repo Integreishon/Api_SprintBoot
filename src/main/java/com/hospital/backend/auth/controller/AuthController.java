@@ -37,7 +37,7 @@ public class AuthController {
     @Operation(summary = "Registrar usuario", description = "Crear nueva cuenta de usuario")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
-        return ResponseEntity.ok(ApiResponse.success("Usuario registrado exitosamente", response));
+        return ResponseEntity.ok(ApiResponse.success("Registro exitoso", response));
     }
     
     @GetMapping("/profile")

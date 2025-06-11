@@ -22,26 +22,19 @@ public class DoctorResponse {
     private String consultationRoom;
     private Boolean isActive;
     private LocalDate hireDate;
-    private List<SpecialtyInfo> specialties;
-    private List<AvailabilityInfo> availability;
+    private String biography;
+    private List<DoctorSpecialtyDto> specialties;
+    private Long primarySpecialtyId;
+    private String primarySpecialtyName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
     @Data
-    public static class SpecialtyInfo {
+    public static class DoctorSpecialtyDto {
+        private Long id;
         private Long specialtyId;
         private String specialtyName;
         private Boolean isPrimary;
         private LocalDate certificationDate;
-    }
-    
-    @Data
-    public static class AvailabilityInfo {
-        private Integer dayOfWeek;
-        private String dayName;
-        private String startTime;
-        private String endTime;
-        private Integer slotDuration;
-        private Boolean isActive;
     }
 }

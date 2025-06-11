@@ -1,6 +1,7 @@
 // DTO para crear nuevo paciente
 package com.hospital.backend.user.dto.request;
 
+import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -41,6 +42,8 @@ public class CreatePatientRequest {
     
     @NotNull(message = "El género es obligatorio")
     private Gender gender;
+    
+    private BloodType bloodType;
     
     @NotBlank(message = "El teléfono es obligatorio")
     @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Formato de teléfono inválido")

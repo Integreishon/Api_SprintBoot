@@ -1,6 +1,7 @@
 // DTO de respuesta para datos de paciente
 package com.hospital.backend.user.dto.response;
 
+import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class PatientResponse {
     private LocalDate birthDate;
     private Integer age;
     private Gender gender;
+    private BloodType bloodType;
     private String phone;
     private String emergencyContactName;
     private String emergencyContactPhone;

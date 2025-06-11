@@ -25,10 +25,9 @@ public class GlobalExceptionHandler {
         log.error("Resource not found: {}", ex.getMessage());
         
         ErrorResponse error = new ErrorResponse(
-            "RESOURCE_NOT_FOUND",
-            ex.getMessage(),
             HttpStatus.NOT_FOUND.value(),
-            request.getDescription(false).replace("uri=", "")
+            "RESOURCE_NOT_FOUND",
+            ex.getMessage()
         );
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -40,10 +39,9 @@ public class GlobalExceptionHandler {
         log.error("Validation error: {}", ex.getMessage());
         
         ErrorResponse error = new ErrorResponse(
-            "VALIDATION_ERROR",
-            ex.getMessage(),
             HttpStatus.BAD_REQUEST.value(),
-            request.getDescription(false).replace("uri=", "")
+            "VALIDATION_ERROR",
+            ex.getMessage()
         );
         
         return ResponseEntity.badRequest().body(error);
@@ -55,10 +53,9 @@ public class GlobalExceptionHandler {
         log.error("Business rule violation: {}", ex.getMessage());
         
         ErrorResponse error = new ErrorResponse(
-            "BUSINESS_ERROR",
-            ex.getMessage(),
             HttpStatus.UNPROCESSABLE_ENTITY.value(),
-            request.getDescription(false).replace("uri=", "")
+            "BUSINESS_ERROR",
+            ex.getMessage()
         );
         
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
@@ -70,10 +67,9 @@ public class GlobalExceptionHandler {
         log.error("Unauthorized access: {}", ex.getMessage());
         
         ErrorResponse error = new ErrorResponse(
-            "UNAUTHORIZED",
-            ex.getMessage(),
             HttpStatus.UNAUTHORIZED.value(),
-            request.getDescription(false).replace("uri=", "")
+            "UNAUTHORIZED",
+            ex.getMessage()
         );
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
@@ -85,10 +81,9 @@ public class GlobalExceptionHandler {
         log.error("Access denied: {}", ex.getMessage());
         
         ErrorResponse error = new ErrorResponse(
-            "ACCESS_DENIED",
-            "No tiene permisos para acceder a este recurso",
             HttpStatus.FORBIDDEN.value(),
-            request.getDescription(false).replace("uri=", "")
+            "ACCESS_DENIED",
+            "No tiene permisos para acceder a este recurso"
         );
         
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
@@ -105,12 +100,11 @@ public class GlobalExceptionHandler {
         }
         
         ErrorResponse error = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
             "VALIDATION_FAILED",
             "Errores de validación en los datos enviados",
-            HttpStatus.BAD_REQUEST.value(),
-            request.getDescription(false).replace("uri=", "")
+            details
         );
-        error.setDetails(details);
         
         return ResponseEntity.badRequest().body(error);
     }
@@ -121,10 +115,9 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error: ", ex);
         
         ErrorResponse error = new ErrorResponse(
-            "INTERNAL_ERROR",
-            "Error interno del servidor",
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            request.getDescription(false).replace("uri=", "")
+            "INTERNAL_ERROR",
+            "Error interno del servidor"
         );
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);

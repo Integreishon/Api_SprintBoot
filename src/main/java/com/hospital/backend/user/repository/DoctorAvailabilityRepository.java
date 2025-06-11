@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -63,4 +64,13 @@ public interface DoctorAvailabilityRepository extends JpaRepository<DoctorAvaila
     void deleteByDoctorId(Long doctorId);
     
     void deleteByDoctorIdAndDayOfWeek(Long doctorId, Integer dayOfWeek);
+    
+    @Query("SELECT COUNT(da) FROM DoctorAvailability da " +
+           "WHERE da.dayOfWeek = :dayOfWeek " +
+           "AND da.isActive = true")
+    Long countAvailableSlotsForDay(@Param("dayOfWeek") Integer dayOfWeek);
+    
+    @Query("SELECT COUNT(da) FROM DoctorAvailability da " +
+           "WHERE da.dayOfWeek = :dayOfWeek")
+    Long countTotalSlotsForDay(@Param("dayOfWeek") Integer dayOfWeek);
 }

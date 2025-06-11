@@ -4,6 +4,7 @@ package com.hospital.backend.user.entity;
 import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.catalog.entity.DocumentType;
 import com.hospital.backend.common.entity.BaseEntity;
+import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -43,6 +44,10 @@ public class Patient extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", nullable = false)
     private Gender gender;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "blood_type")
+    private BloodType bloodType;
     
     @Column(name = "phone", nullable = false)
     private String phone;

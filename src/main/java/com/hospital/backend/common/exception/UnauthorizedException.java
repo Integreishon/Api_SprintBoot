@@ -7,6 +7,10 @@ public class UnauthorizedException extends RuntimeException {
         super(message);
     }
     
+    public UnauthorizedException(String message, Throwable cause) {
+        super(message, cause);
+    }
+    
     public UnauthorizedException() {
         super("Token de autenticación inválido o expirado");
     }

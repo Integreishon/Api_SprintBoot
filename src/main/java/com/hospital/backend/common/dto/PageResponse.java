@@ -9,6 +9,10 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
+/**
+ * Response DTO que encapsula respuestas paginadas para las APIs
+ * @param <T> tipo de dato contenido en la página
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,27 +20,28 @@ import java.util.List;
 public class PageResponse<T> {
     
     private List<T> content;
-    private int page;
-    private int size;
+    private int pageNumber;
+    private int pageSize;
     private long totalElements;
     private int totalPages;
-    private boolean first;
     private boolean last;
+    private boolean first;
     private boolean hasNext;
     private boolean hasPrevious;
     
-    public static <T> PageResponse<T> of(Page<T> page) {
-        return new PageResponse<>(
-            page.getContent(),
-            page.getNumber(),
-            page.getSize(),
-            page.getTotalElements(),
-            page.getTotalPages(),
-            page.isFirst(),
-            page.isLast(),
-            page.hasNext(),
-            page.hasPrevious()
-        );
+    /**
+     * Constructor a partir de un objeto Page de Spring
+     * @param page objeto Page de Spring
+     */
+    public PageResponse(Page<T> page) {
+        this.content = page.getContent();
+        this.pageNumber = page.getNumber();
+        this.pageSize = page.getSize();
+        this.totalElements = page.getTotalElements();
+        this.totalPages = page.getTotalPages();
+        this.last = page.isLast();
+        this.first = page.isFirst();
+        this.hasNext = page.hasNext();
+        this.hasPrevious = page.hasPrevious();
     }
-    
 }
