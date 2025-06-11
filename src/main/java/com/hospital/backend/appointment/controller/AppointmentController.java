@@ -32,7 +32,7 @@ import java.util.List;
  * VERSIÓN TEMPORAL SIN PreAuthorize COMPLEJOS PARA DEBUGGING
  */
 @RestController
-@RequestMapping("/api/v1/appointments")
+@RequestMapping("/appointments")
 @Tag(name = "Appointment Controller", description = "API para la gestión de citas médicas")
 @RequiredArgsConstructor
 public class AppointmentController {

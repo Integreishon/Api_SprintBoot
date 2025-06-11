@@ -52,7 +52,7 @@ public class OpenApiConfig {
     public GroupedOpenApi appointmentApi() {
         return GroupedOpenApi.builder()
                 .group("appointments")
-                .pathsToMatch("/api/v1/appointments/**")
+                .pathsToMatch("/appointments/**")
                 .build();
     }
 
