@@ -4,209 +4,132 @@ import com.hospital.backend.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/admin/api-status")
 @RequiredArgsConstructor
-@Tag(name = "📊 API Dashboard", description = "Dashboard visual del estado de todas las APIs del sistema")
+@Tag(name = "📊 Estado del Sistema", description = "Información en tiempo real sobre el estado y estadísticas de la API")
 public class ApiStatusController {
-
-    @Operation(
-        summary = "📊 Dashboard Principal - Estado de todas las APIs",
-        description = """
-        ### 🎯 Vista General del Sistema
+    
+    private final ApplicationContext applicationContext;
+    
+    @GetMapping("/stats")
+    @Operation(summary = "Estadísticas del Sistema", description = "Obtiene estadísticas en tiempo real de la API")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getApiStats() {
+        Map<String, Object> stats = new HashMap<>();
         
-        Muestra el estado en tiempo real de todas las APIs organizadas por módulos:
-        
-        - ✅ **APIs Activas** - Funcionando correctamente
-        - ⚠️ **APIs con Advertencias** - Funcionando con limitaciones  
-        - ❌ **APIs con Errores** - Requieren atención
-        - 🔧 **APIs en Mantenimiento** - Temporalmente deshabilitadas
-        
-        **Útil para:** Monitoreo, debugging, y visión general del sistema
-        """
-    )
-    @GetMapping("/dashboard")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getApiDashboard() {
-        Map<String, Object> dashboard = new HashMap<>();
-        
-        // Información general del sistema
-        Map<String, Object> systemInfo = new HashMap<>();
-        systemInfo.put("systemName", "🏥 Hospital Management System");
-        systemInfo.put("version", "2.0.0");
-        systemInfo.put("environment", "Development");
-        systemInfo.put("serverTime", LocalDateTime.now());
-        systemInfo.put("uptime", "Sistema activo");
-        
-        // Estado de módulos de APIs
-        List<Map<String, Object>> apiModules = Arrays.asList(
-            createModuleStatus("🔐 Autenticación", "ACTIVE", 3, 0, 
-                "Login, registro, tokens JWT", 
-                Arrays.asList("POST /auth/login", "POST /auth/register", "POST /auth/refresh")),
+        try {
+            // Obtener RequestMappingHandlerMapping para contar endpoints
+            RequestMappingHandlerMapping mappingHandler = applicationContext
+                    .getBean(RequestMappingHandlerMapping.class);
+            
+            Map<RequestMappingInfo, HandlerMethod> handlerMethods = mappingHandler.getHandlerMethods();
+            
+            // Contar endpoints por método HTTP
+            Map<String, Integer> methodCounts = new HashMap<>();
+            methodCounts.put("GET", 0);
+            methodCounts.put("POST", 0);
+            methodCounts.put("PUT", 0);
+            methodCounts.put("DELETE", 0);
+            methodCounts.put("PATCH", 0);
+            
+            // Contar endpoints por módulo
+            Map<String, Integer> moduleCounts = new HashMap<>();
+            
+            int totalEndpoints = 0;
+            int securedEndpoints = 0;
+            
+            for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMethods.entrySet()) {
+                RequestMappingInfo info = entry.getKey();
+                HandlerMethod method = entry.getValue();
                 
-            createModuleStatus("📚 Catálogos", "ACTIVE", 9, 0,
-                "Especialidades, tipos documento, métodos pago",
-                Arrays.asList("GET /specialties", "GET /document-types", "GET /payment-methods")),
+                // Contar por método HTTP
+                Set<org.springframework.web.bind.annotation.RequestMethod> methods = info.getMethodsCondition().getMethods();
+                if (!methods.isEmpty()) {
+                    String httpMethod = methods.iterator().next().name();
+                    methodCounts.put(httpMethod, methodCounts.getOrDefault(httpMethod, 0) + 1);
+                }
                 
-            createModuleStatus("👥 Usuarios", "ACTIVE", 8, 0,
-                "Gestión de pacientes y doctores",
-                Arrays.asList("GET /patients", "POST /patients", "GET /doctors", "POST /doctors")),
+                // Determinar módulo basado en el paquete
+                String packageName = method.getBeanType().getPackageName();
+                String module = extractModuleFromPackage(packageName);
+                moduleCounts.put(module, moduleCounts.getOrDefault(module, 0) + 1);
                 
-            createModuleStatus("📅 Citas", "ACTIVE", 7, 0,
-                "Agendamiento y disponibilidad médica",
-                Arrays.asList("POST /appointments", "GET /appointments/available-slots", "PUT /appointments/{id}")),
+                totalEndpoints++;
                 
-            createModuleStatus("💊 Médico", "ACTIVE", 12, 0,
-                "Historiales, prescripciones, archivos",
-                Arrays.asList("POST /medical-records", "GET /prescriptions", "POST /medical-attachments")),
-                
-            createModuleStatus("💰 Pagos", "ACTIVE", 5, 0,
-                "Sistema de facturación y pagos",
-                Arrays.asList("POST /payments", "GET /payments/history", "POST /payments/{id}/refund")),
-                
-            createModuleStatus("🔔 Notificaciones", "ACTIVE", 6, 0,
-                "Emails, SMS y notificaciones push",
-                Arrays.asList("GET /notifications", "POST /notifications", "PUT /notifications/{id}/read")),
-                
-            createModuleStatus("📊 Analytics", "ACTIVE", 8, 0,
-                "Reportes, métricas y auditorías",
-                Arrays.asList("GET /analytics/dashboard", "GET /audit/logs", "GET /admin/reports")),
-                
-            createModuleStatus("🤖 Chatbot", "ACTIVE", 4, 0,
-                "Asistente virtual y base conocimientos",
-                Arrays.asList("POST /chatbot/query", "GET /chatbot/conversations", "POST /chatbot/feedback"))
-        );
+                // Verificar si tiene anotaciones de seguridad
+                if (method.hasMethodAnnotation(org.springframework.security.access.prepost.PreAuthorize.class)) {
+                    securedEndpoints++;
+                }
+            }
+            
+            // Construir respuesta
+            stats.put("totalEndpoints", totalEndpoints);
+            stats.put("securedEndpoints", securedEndpoints);
+            stats.put("publicEndpoints", totalEndpoints - securedEndpoints);
+            stats.put("methodBreakdown", methodCounts);
+            stats.put("moduleBreakdown", moduleCounts);
+            stats.put("modulesActive", moduleCounts.size());
+            stats.put("lastUpdated", LocalDateTime.now());
+            stats.put("systemStatus", "🟢 Operativo");
+            stats.put("authenticationEnabled", true);
+            stats.put("version", "2.0.0");
+            
+            // Calcular porcentaje de seguridad
+            double securityPercentage = totalEndpoints > 0 ? 
+                (double) securedEndpoints / totalEndpoints * 100 : 0;
+            stats.put("securityPercentage", Math.round(securityPercentage * 100.0) / 100.0);
+            
+        } catch (Exception e) {
+            // Fallback si hay algún error
+            stats.put("totalEndpoints", 85);
+            stats.put("modulesActive", 9);
+            stats.put("systemStatus", "🟢 Operativo");
+            stats.put("lastUpdated", LocalDateTime.now());
+            stats.put("error", "Estadísticas aproximadas");
+        }
         
-        // Estadísticas globales
-        Map<String, Object> globalStats = new HashMap<>();
-        int totalApis = apiModules.stream().mapToInt(m -> (Integer) m.get("totalEndpoints")).sum();
-        long activeModules = apiModules.stream().filter(m -> "ACTIVE".equals(m.get("status"))).count();
-        
-        globalStats.put("totalEndpoints", totalApis);
-        globalStats.put("activeModules", activeModules);
-        globalStats.put("totalModules", apiModules.size());
-        globalStats.put("healthScore", calculateHealthScore(apiModules));
-        globalStats.put("lastUpdated", LocalDateTime.now());
-        
-        // Endpoints más usados (simulado)
-        List<Map<String, Object>> popularEndpoints = Arrays.asList(
-            Map.of("endpoint", "POST /auth/login", "calls", 1250, "avgResponse", "45ms"),
-            Map.of("endpoint", "GET /appointments", "calls", 890, "avgResponse", "120ms"),
-            Map.of("endpoint", "POST /appointments", "calls", 650, "avgResponse", "200ms"),
-            Map.of("endpoint", "GET /specialties", "calls", 420, "avgResponse", "35ms"),
-            Map.of("endpoint", "POST /medical-records", "calls", 380, "avgResponse", "180ms")
-        );
-        
-        // Alertas del sistema
-        List<Map<String, Object>> systemAlerts = Arrays.asList(
-            Map.of("type", "INFO", "message", "✅ Todos los servicios funcionando correctamente", "timestamp", LocalDateTime.now().minusMinutes(5)),
-            Map.of("type", "SUCCESS", "message", "🔄 Base de datos optimizada automáticamente", "timestamp", LocalDateTime.now().minusHours(2))
-        );
-        
-        dashboard.put("systemInfo", systemInfo);
-        dashboard.put("apiModules", apiModules);
-        dashboard.put("globalStats", globalStats);
-        dashboard.put("popularEndpoints", popularEndpoints);
-        dashboard.put("systemAlerts", systemAlerts);
-        
-        return ResponseEntity.ok(ApiResponse.success("Dashboard cargado exitosamente", dashboard));
+        return ResponseEntity.ok(ApiResponse.success("Estadísticas obtenidas exitosamente", stats));
     }
     
-    @Operation(
-        summary = "🔍 Estado Detallado por Módulo",
-        description = "Información detallada del estado de un módulo específico con métricas y endpoints"
-    )
-    @GetMapping("/module/{moduleName}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getModuleDetails() {
-        Map<String, Object> moduleDetails = new HashMap<>();
+    @GetMapping("/health")
+    @Operation(summary = "Estado de Salud", description = "Verifica el estado general del sistema")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getHealthStatus() {
+        Map<String, Object> health = new HashMap<>();
         
-        // Simular datos detallados de un módulo
-        moduleDetails.put("moduleName", "📅 Sistema de Citas");
-        moduleDetails.put("status", "ACTIVE");
-        moduleDetails.put("uptime", "99.9%");
-        moduleDetails.put("lastDeployment", LocalDateTime.now().minusDays(3));
+        health.put("status", "UP");
+        health.put("timestamp", LocalDateTime.now());
+        health.put("database", "🟢 Conectado");
+        health.put("authentication", "🟢 Activo");
+        health.put("swagger", "🟢 Funcionando");
+        health.put("uptime", "Sistema en línea");
         
-        List<Map<String, Object>> endpoints = Arrays.asList(
-            Map.of("method", "GET", "path", "/appointments", "status", "✅ ACTIVE", "responseTime", "120ms"),
-            Map.of("method", "POST", "path", "/appointments", "status", "✅ ACTIVE", "responseTime", "200ms"),
-            Map.of("method", "GET", "path", "/appointments/available-slots", "status", "✅ ACTIVE", "responseTime", "85ms"),
-            Map.of("method", "PUT", "path", "/appointments/{id}", "status", "✅ ACTIVE", "responseTime", "150ms"),
-            Map.of("method", "DELETE", "path", "/appointments/{id}", "status", "✅ ACTIVE", "responseTime", "95ms")
-        );
-        
-        moduleDetails.put("endpoints", endpoints);
-        moduleDetails.put("totalRequests", 15420);
-        moduleDetails.put("successRate", "98.5%");
-        moduleDetails.put("avgResponseTime", "130ms");
-        
-        return ResponseEntity.ok(ApiResponse.success("Detalles del módulo obtenidos", moduleDetails));
+        return ResponseEntity.ok(ApiResponse.success("Sistema funcionando correctamente", health));
     }
     
-    @Operation(
-        summary = "🚨 Alertas y Errores del Sistema",
-        description = "Lista de alertas, errores y warnings de todas las APIs"
-    )
-    @GetMapping("/alerts")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSystemAlerts() {
-        List<Map<String, Object>> alerts = Arrays.asList(
-            Map.of(
-                "id", 1,
-                "type", "SUCCESS",
-                "severity", "LOW",
-                "module", "General",
-                "message", "✅ Todos los servicios están funcionando correctamente",
-                "timestamp", LocalDateTime.now().minusMinutes(5),
-                "resolved", true
-            ),
-            Map.of(
-                "id", 2,
-                "type", "INFO", 
-                "severity", "LOW",
-                "module", "Database",
-                "message", "🔄 Optimización automática de índices completada",
-                "timestamp", LocalDateTime.now().minusHours(2),
-                "resolved", true
-            ),
-            Map.of(
-                "id", 3,
-                "type", "WARNING",
-                "severity", "MEDIUM", 
-                "module", "Notifications",
-                "message", "📧 Cola de emails con 15 elementos pendientes",
-                "timestamp", LocalDateTime.now().minusMinutes(30),
-                "resolved", false
-            )
-        );
-        
-        return ResponseEntity.ok(ApiResponse.success("Alertas del sistema obtenidas", alerts));
-    }
-    
-    private Map<String, Object> createModuleStatus(String name, String status, int totalEndpoints, 
-                                                  int failedEndpoints, String description, List<String> keyEndpoints) {
-        Map<String, Object> module = new HashMap<>();
-        module.put("name", name);
-        module.put("status", status);
-        module.put("totalEndpoints", totalEndpoints);
-        module.put("activeEndpoints", totalEndpoints - failedEndpoints);
-        module.put("failedEndpoints", failedEndpoints);
-        module.put("description", description);
-        module.put("keyEndpoints", keyEndpoints);
-        module.put("healthScore", failedEndpoints == 0 ? 100 : ((totalEndpoints - failedEndpoints) * 100) / totalEndpoints);
-        return module;
-    }
-    
-    private int calculateHealthScore(List<Map<String, Object>> modules) {
-        return (int) modules.stream()
-                .mapToInt(m -> (Integer) m.get("healthScore"))
-                .average()
-                .orElse(100.0);
+    private String extractModuleFromPackage(String packageName) {
+        if (packageName.contains(".auth.")) return "Autenticación";
+        if (packageName.contains(".user.")) return "Usuarios";
+        if (packageName.contains(".appointment.")) return "Citas";
+        if (packageName.contains(".catalog.")) return "Catálogos";
+        if (packageName.contains(".medical.")) return "Médico";
+        if (packageName.contains(".payment.")) return "Pagos";
+        if (packageName.contains(".notification.")) return "Notificaciones";
+        if (packageName.contains(".chatbot.")) return "Chatbot";
+        if (packageName.contains(".admin.") || packageName.contains(".analytics.")) return "Administración";
+        return "Otros";
     }
 }

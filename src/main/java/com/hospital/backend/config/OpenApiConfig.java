@@ -132,4 +132,28 @@ public class OpenApiConfig {
                 .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
                 .build();
     }
+
+    @Bean
+    public GroupedOpenApi allApisApi() {
+        return GroupedOpenApi.builder()
+                .group("all")
+                .displayName("🌐 Todas las APIs")
+                .pathsToMatch("/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Hospital Management System API")
+                            .description("""
+                                    **Sistema de Gestión Hospitalaria**
+                                    
+                                    API REST para operaciones hospitalarias completas.
+                                    
+                                    **🔑 Autenticación:** Use `/auth/login` → Botón "Authorize" → `Bearer {token}`
+                                    """)
+                            .version("2.0.0")
+                            .contact(new Contact()
+                                    .name("Hospital API Team")
+                                    .email("dev@hospital.pe")));
+                })
+                .build();
+    }
 }
