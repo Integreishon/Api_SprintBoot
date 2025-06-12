@@ -19,12 +19,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controlador para la gestión de pagos
  */
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/payments")
 @RequiredArgsConstructor
+@Tag(name = "💰 Pagos", description = "Sistema de pagos: facturación, confirmación y reportes financieros.")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -34,6 +38,7 @@ public class PaymentController {
      */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    @Operation(summary = "Crear pago", description = "Registra un nuevo pago para una cita médica")
     public ResponseEntity<ApiResponse<PaymentResponse>> createPayment(
             @Valid @RequestBody CreatePaymentRequest request) {
         PaymentResponse payment = paymentService.createPayment(request);
@@ -46,6 +51,7 @@ public class PaymentController {
      */
     @PatchMapping("/{id}/confirm")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    @Operation(summary = "Confirmar pago", description = "Confirma un pago pendiente con referencia de transacción")
     public ResponseEntity<ApiResponse<PaymentResponse>> confirmPayment(
             @PathVariable Long id,
             @RequestParam String transactionReference) {
@@ -58,6 +64,7 @@ public class PaymentController {
      */
     @PatchMapping("/{id}/refund")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reembolsar pago", description = "Procesa el reembolso de un pago confirmado")
     public ResponseEntity<ApiResponse<PaymentResponse>> refundPayment(
             @PathVariable Long id,
             @RequestParam(required = false) String notes) {
@@ -70,6 +77,7 @@ public class PaymentController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT')")
+    @Operation(summary = "Obtener pago por ID", description = "Recupera los detalles de un pago específico")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(
             @PathVariable Long id) {
         PaymentResponse payment = paymentService.getPayment(id);
@@ -81,6 +89,7 @@ public class PaymentController {
      */
     @GetMapping("/appointment/{appointmentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT')")
+    @Operation(summary = "Pago por cita", description = "Obtiene el pago asociado a una cita médica")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPaymentByAppointment(
             @PathVariable Long appointmentId) {
         PaymentResponse payment = paymentService.getPaymentByAppointment(appointmentId);
@@ -92,6 +101,7 @@ public class PaymentController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar pagos", description = "Obtiene una lista paginada de todos los pagos")
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponse>>> getAllPayments(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         PageResponse<PaymentResponse> payments = paymentService.getAllPayments(pageable);
@@ -103,6 +113,7 @@ public class PaymentController {
      */
     @GetMapping("/status/{status}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Pagos por estado", description = "Filtra pagos por su estado (pendiente, confirmado, etc.)")
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponse>>> getPaymentsByStatus(
             @PathVariable PaymentStatus status,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
@@ -115,6 +126,7 @@ public class PaymentController {
      */
     @GetMapping("/summary")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Resumen financiero", description = "Genera reportes financieros de pagos por período")
     public ResponseEntity<ApiResponse<PaymentSummaryResponse>> generatePaymentSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {

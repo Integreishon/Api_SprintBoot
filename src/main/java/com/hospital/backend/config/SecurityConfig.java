@@ -35,24 +35,33 @@ public class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Autenticación pública
+                // Autenticación pública - CON Y SIN /api prefix
+                .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 
-                // Catálogos públicos
+                // Catálogos públicos - CON Y SIN /api prefix
+                .requestMatchers("/document-types/**").permitAll()
                 .requestMatchers("/api/document-types/**").permitAll()
+                .requestMatchers("/specialties/**").permitAll()
                 .requestMatchers("/api/specialties/**").permitAll()
+                .requestMatchers("/payment-methods/**").permitAll()
                 .requestMatchers("/api/payment-methods/**").permitAll()
                 
-                // Chatbot público
+                // Chatbot público - CON Y SIN /api prefix
+                .requestMatchers("/chatbot/**").permitAll()
                 .requestMatchers("/api/chatbot/**").permitAll()
                 
-                // Swagger UI y documentación - CON Y SIN /api prefix
+                // Swagger UI y documentación - CON Y SIN /api prefix - COMPLETO Y DETALLADO
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/swagger-ui/**", "/api/swagger-ui.html").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
                 .requestMatchers("/api/v3/api-docs/**", "/api/v3/api-docs").permitAll()
+                .requestMatchers("/v3/api-docs/swagger-config").permitAll() // RUTA CRÍTICA
+                .requestMatchers("/api/v3/api-docs/swagger-config").permitAll() // RUTA CRÍTICA
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/webjars/**").permitAll()
+                .requestMatchers("/swagger-check").permitAll()
+                .requestMatchers("/api/swagger-check").permitAll()
                 
                 // Actuator - CON Y SIN /api prefix
                 .requestMatchers("/actuator/**").permitAll()

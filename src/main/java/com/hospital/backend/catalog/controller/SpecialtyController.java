@@ -22,9 +22,9 @@ import java.util.List;
  * Controlador REST para la gestión de especialidades médicas
  */
 @RestController
-@RequestMapping("/api/specialties")
+@RequestMapping("/specialties")
 @RequiredArgsConstructor
-@Tag(name = "Especialidades", description = "API para gestión de especialidades médicas")
+@Tag(name = "🏥 Especialidades", description = "Catálogo de especialidades médicas con precios y configuración.")
 public class SpecialtyController {
     
     private final SpecialtyService specialtyService;

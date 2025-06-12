@@ -23,9 +23,9 @@ import java.util.List;
  * Controlador REST para la gestión de métodos de pago
  */
 @RestController
-@RequestMapping("/api/payment-methods")
+@RequestMapping("/payment-methods")
 @RequiredArgsConstructor
-@Tag(name = "Métodos de Pago", description = "API para gestión de métodos de pago")
+@Tag(name = "💳 Métodos de Pago", description = "Catálogo de métodos de pago y configuración de tarifas.")
 public class PaymentMethodController {
 
     private final PaymentMethodService paymentMethodService;

@@ -3,13 +3,15 @@ package com.hospital.backend.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -18,74 +20,116 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("🏥 Hospital Management API")
-                        .description("Sistema Integral de Gestión Hospitalaria - API REST completa para la gestión de citas, pacientes, doctores, historiales médicos y administración hospitalaria.")
-                        .version("1.0.0")
+                        .title("Hospital Management System API")
+                        .description("""
+                                **Sistema Integral de Gestión Hospitalaria**
+                                
+                                API REST moderna para la gestión completa de operaciones hospitalarias, 
+                                incluyendo autenticación, gestión de usuarios, citas médicas, historiales 
+                                clínicos, pagos y analítica avanzada.
+                                
+                                **🔐 Autenticación:** Para probar los endpoints, autentíquese primero en el grupo 
+                                "Autenticación" usando `POST /auth/login` y luego use el botón "Authorize" 
+                                con el token JWT obtenido.
+                                """)
+                        .version("2.0.0")
                         .contact(new Contact()
-                                .name("Hospital API Development Team")
-                                .email("dev@hospital.pe")
-                                .url("https://github.com/hospital-api"))
-                        .license(new License()
-                                .name("MIT License")
-                                .url("https://opensource.org/licenses/MIT")))
+                                .name("Hospital API Team")
+                                .email("dev@hospital.pe")))
+                .servers(List.of(
+                        new Server()
+                                .url("http://localhost:8080/api")
+                                .description("Servidor de Desarrollo")))
                 .components(new Components()
-                        .addSecuritySchemes("Bearer Authentication", 
+                        .addSecuritySchemes("JWT Authentication",
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Ingrese su token JWT en el formato: Bearer {token}")))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"));
+                                        .description("Token JWT. Formato: Bearer {token}")))
+                .addSecurityItem(new SecurityRequirement().addList("JWT Authentication"));
     }
 
-    // ✅ PASO 1: AUTENTICACIÓN (FUNCIONANDO)
+    // CONFIGURACIÓN DEFINITIVA PARA GRUPOS QUE SÍ FUNCIONA
+    
     @Bean
-    public GroupedOpenApi authApi() {
+    public GroupedOpenApi authenticationApi() {
         return GroupedOpenApi.builder()
                 .group("authentication")
-                .pathsToMatch("/api/auth/**")
+                .displayName("🔐 Autenticación")
+                .pathsToMatch("/auth/**")
                 .build();
     }
 
-    // ✅ PASO 2: ACTIVANDO APPOINTMENTS AHORA
     @Bean
-    public GroupedOpenApi appointmentApi() {
+    public GroupedOpenApi usersApi() {
+        return GroupedOpenApi.builder()
+                .group("users")
+                .displayName("👥 Usuarios")
+                .pathsToMatch("/patients/**", "/doctors/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi appointmentsApi() {
         return GroupedOpenApi.builder()
                 .group("appointments")
+                .displayName("📅 Citas")
                 .pathsToMatch("/appointments/**")
                 .build();
     }
 
+    @Bean
+    public GroupedOpenApi catalogsApi() {
+        return GroupedOpenApi.builder()
+                .group("catalogs")
+                .displayName("📋 Catálogos")
+                .pathsToMatch("/specialties/**", "/document-types/**", "/payment-methods/**")
+                .build();
+    }
 
-    // ⏳ PASO 3: Si appointments funciona, probar medical
     @Bean
     public GroupedOpenApi medicalApi() {
         return GroupedOpenApi.builder()
                 .group("medical")
-                .pathsToMatch("/api/medical-records/**", "/api/prescriptions/**")
+                .displayName("🏥 Médico")
+                .pathsToMatch("/medical-records/**", "/prescriptions/**", "/medical-attachments/**")
                 .build();
     }
- 
 
+    @Bean
+    public GroupedOpenApi paymentsApi() {
+        return GroupedOpenApi.builder()
+                .group("payments")
+                .displayName("💰 Pagos")
+                .pathsToMatch("/payments/**")
+                .build();
+    }
 
-    // ⏳ PASO 4: Si medical funciona, probar admin
+    @Bean
+    public GroupedOpenApi notificationsApi() {
+        return GroupedOpenApi.builder()
+                .group("notifications")
+                .displayName("🔔 Notificaciones")
+                .pathsToMatch("/notifications/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi chatbotApi() {
+        return GroupedOpenApi.builder()
+                .group("chatbot")
+                .displayName("🤖 Chatbot")
+                .pathsToMatch("/chatbot/**")
+                .build();
+    }
+
     @Bean
     public GroupedOpenApi adminApi() {
         return GroupedOpenApi.builder()
-                .group("administration")
-                .pathsToMatch("/api/dashboard/**", "/api/analytics/**", "/api/settings/**")
+                .group("admin")
+                .displayName("⚙️ Administración")
+                .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
                 .build();
     }
-
-
-    // ⏳ PASO 5: Si admin funciona, probar hospital-api general
-    @Bean
-    public GroupedOpenApi publicApi() {
-        return GroupedOpenApi.builder()
-                .group("hospital-api")
-                .pathsToMatch("/api/**")
-                .packagesToScan("com.hospital.backend")
-                .build();
-    }
-
 }

@@ -1,0 +1,283 @@
+/* Mejoras visuales para Swagger UI - Diseño limpio y profesional */
+
+/* Variables de color */
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success-color: #059669;
+  --warning-color: #d97706;
+  --error-color: #dc2626;
+  --info-color: #0891b2;
+  --text-color: #1f2937;
+  --text-muted: #6b7280;
+  --background: #ffffff;
+  --surface: #f9fafb;
+  --border-color: #e5e7eb;
+  --border-light: #f3f4f6;
+}
+
+/* Fuentes mejoradas */
+.swagger-ui {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Encabezado principal */
+.swagger-ui .topbar {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+  padding: 1rem 0 !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15) !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  padding: 0.5rem !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper .select-label select {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-weight: 500 !important;
+  color: var(--text-color) !important;
+}
+
+/* Información de la API */
+.swagger-ui .info {
+  margin: 2rem 0 !important;
+}
+
+.swagger-ui .info .title {
+  color: var(--text-color) !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 1rem !important;
+}
+
+.swagger-ui .info .title small.version-stamp {
+  background: var(--primary-color) !important;
+  color: white !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-left: 1rem !important;
+}
+
+.swagger-ui .info .description {
+  color: var(--text-muted) !important;
+  line-height: 1.6 !important;
+  font-size: 1rem !important;
+}
+
+/* Secciones de endpoints */
+.swagger-ui .opblock-tag {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: var(--text-color) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 8px !important;
+  padding: 1rem 1.25rem !important;
+  margin: 1.5rem 0 1rem 0 !important;
+  border-left: 4px solid var(--primary-color) !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui .opblock-tag:hover {
+  background: #f8fafc !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Bloques de operación */
+.swagger-ui .opblock {
+  border-radius: 8px !important;
+  border: 1px solid var(--border-light) !important;
+  margin-bottom: 1rem !important;
+  overflow: hidden !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui .opblock:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Métodos HTTP con mejores colores */
+.swagger-ui .opblock.opblock-get {
+  border-left: 4px solid var(--info-color) !important;
+}
+
+.swagger-ui .opblock.opblock-get .opblock-summary {
+  background: rgba(8, 145, 178, 0.05) !important;
+}
+
+.swagger-ui .opblock.opblock-post {
+  border-left: 4px solid var(--success-color) !important;
+}
+
+.swagger-ui .opblock.opblock-post .opblock-summary {
+  background: rgba(5, 150, 105, 0.05) !important;
+}
+
+.swagger-ui .opblock.opblock-put {
+  border-left: 4px solid var(--warning-color) !important;
+}
+
+.swagger-ui .opblock.opblock-put .opblock-summary {
+  background: rgba(217, 119, 6, 0.05) !important;
+}
+
+.swagger-ui .opblock.opblock-delete {
+  border-left: 4px solid var(--error-color) !important;
+}
+
+.swagger-ui .opblock.opblock-delete .opblock-summary {
+  background: rgba(220, 38, 38, 0.05) !important;
+}
+
+/* Botones mejorados */
+.swagger-ui .btn {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui .btn.try-out__btn {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.swagger-ui .btn.try-out__btn:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+
+.swagger-ui .btn.execute {
+  background: var(--success-color) !important;
+  border-color: var(--success-color) !important;
+  color: white !important;
+}
+
+.swagger-ui .btn.execute:hover {
+  background: #047857 !important;
+  border-color: #047857 !important;
+}
+
+/* Esquemas de autenticación */
+.swagger-ui .auth-container {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.swagger-ui .auth-container h4 {
+  color: var(--text-color) !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Inputs y formularios */
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui textarea,
+.swagger-ui select {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.swagger-ui input[type="text"]:focus,
+.swagger-ui input[type="password"]:focus,
+.swagger-ui textarea:focus,
+.swagger-ui select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+/* Tablas mejoradas */
+.swagger-ui table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+.swagger-ui table thead tr {
+  background: var(--surface) !important;
+}
+
+.swagger-ui table thead tr th {
+  color: var(--text-color) !important;
+  font-weight: 600 !important;
+  padding: 12px !important;
+  border-bottom: 2px solid var(--border-color) !important;
+}
+
+.swagger-ui table tbody tr td {
+  padding: 12px !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+/* Respuestas y ejemplos */
+.swagger-ui .response-content-type {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 6px !important;
+  padding: 1rem !important;
+}
+
+.swagger-ui .highlight-code {
+  background: #f8fafc !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 6px !important;
+}
+
+/* Modelos */
+.swagger-ui .models {
+  margin-top: 2rem !important;
+  padding-top: 2rem !important;
+  border-top: 1px solid var(--border-light) !important;
+}
+
+.swagger-ui .models h4 {
+  color: var(--text-color) !important;
+  font-weight: 600 !important;
+  font-size: 1.125rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Mejoras responsivas */
+@media (max-width: 768px) {
+  .swagger-ui .info .title {
+    font-size: 1.5rem !important;
+  }
+  
+  .swagger-ui .opblock-tag {
+    padding: 0.75rem 1rem !important;
+    font-size: 1.125rem !important;
+  }
+}
+
+/* Scroll suave */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Mejoras de accesibilidad */
+.swagger-ui .opblock-summary:focus {
+  outline: 2px solid var(--primary-color) !important;
+  outline-offset: 2px !important;
+}
+
+/* Loading states */
+.swagger-ui .loading {
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+}

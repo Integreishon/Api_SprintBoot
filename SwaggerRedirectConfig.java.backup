@@ -1,0 +1,42 @@
+package com.hospital.backend.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class SwaggerRedirectConfig implements WebMvcConfigurer {
+
+    @Value("${server.servlet.context-path:/}")
+    private String contextPath;
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Asegurar que los recursos de Swagger UI están disponibles
+        registry.addResourceHandler("/swagger-ui/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/");
+        
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/");
+                
+        // Añadir el recurso Swagger UI principal
+        registry.addResourceHandler("/swagger-ui.html")
+                .addResourceLocations("classpath:/META-INF/resources/swagger-ui.html");
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // Definir alias simplificados y evitar bucles de redirección
+        registry.addViewController("/swagger").setViewName("redirect:/swagger-ui.html");
+        registry.addViewController("/docs").setViewName("redirect:/swagger-ui.html");
+        
+        // Redirección específica para API Docs
+        registry.addViewController("/api-docs").setViewName("redirect:/v3/api-docs");
+        
+        // Eliminar redirecciones circulares
+        // Swagger UI intentará cargar index.html, pero no debe redirigir nuevamente
+        // registry.addRedirectViewController("/swagger-ui/index.html", "/swagger-ui.html");
+    }
+}

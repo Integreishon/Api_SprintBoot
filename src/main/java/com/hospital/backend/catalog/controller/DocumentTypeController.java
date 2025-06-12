@@ -22,9 +22,9 @@ import java.util.List;
  * Controlador REST para la gestión de tipos de documentos
  */
 @RestController
-@RequestMapping("/api/document-types")
+@RequestMapping("/document-types")
 @RequiredArgsConstructor
-@Tag(name = "Tipos de Documento", description = "API para gestión de tipos de documentos")
+@Tag(name = "📝 Tipos de Documento", description = "Catálogo de tipos de documentos de identidad con validaciones.")
 public class DocumentTypeController {
     
     private final DocumentTypeService documentTypeService;

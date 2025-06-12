@@ -1,0 +1,157 @@
+package com.hospital.backend.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("🏥 Hospital Management System")
+                        .description("""
+                        Sistema Integral de Gestión Hospitalaria - API REST
+                        
+                        Navegue por los grupos organizados para explorar las funcionalidades:
+                        
+                        🔐 **Autenticación** - Login, registro y seguridad
+                        📚 **Catálogos** - Especialidades, documentos, métodos de pago
+                        👥 **Usuarios** - Gestión de pacientes y doctores
+                        📅 **Citas** - Agendamiento y disponibilidad
+                        💊 **Médico** - Historiales, prescripciones, archivos
+                        💰 **Pagos** - Facturación y reportes
+                        🔔 **Notificaciones** - Alertas y comunicaciones
+                        📊 **Analytics** - Reportes y administración
+                        🤖 **Chatbot** - Asistente virtual
+                        
+                        **Para empezar:** Use `/auth/login` para obtener su token JWT
+                        """)
+                        .version("1.0.0")
+                        .contact(new Contact()
+                                .name("Hospital API Development Team")
+                                .email("dev@hospital.pe")
+                                .url("https://github.com/hospital-api"))
+                        .license(new License()
+                                .name("MIT License")
+                                .url("https://opensource.org/licenses/MIT")))
+                .servers(List.of(
+                        new Server().url("http://localhost:8080/api").description("Desarrollo")
+                ))
+                .components(new Components()
+                        .addSecuritySchemes("Bearer Authentication", 
+                                new SecurityScheme()
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")
+                                        .description("🔑 Ingrese su token JWT en el formato: Bearer {token}")))
+                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"));
+    }
+
+    // =================================================================
+    // 🏗️ GRUPOS ORGANIZADOS POR FUNCIONALIDAD
+    // =================================================================
+
+    @Bean
+    public GroupedOpenApi allEndpointsGroup() {
+        return GroupedOpenApi.builder()
+                .group("🌟 00-todas-las-apis")
+                .displayName("🌟 TODAS LAS APIs (Vista Completa)")
+                .pathsToMatch("/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi authenticationGroup() {
+        return GroupedOpenApi.builder()
+                .group("🔐 01-autenticacion")
+                .displayName("🔐 Autenticación y Seguridad")
+                .pathsToMatch("/auth/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi catalogsGroup() {
+        return GroupedOpenApi.builder()
+                .group("📚 02-catalogos")
+                .displayName("📚 Catálogos y Configuración")
+                .pathsToMatch("/specialties/**", "/document-types/**", "/payment-methods/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi usersGroup() {
+        return GroupedOpenApi.builder()
+                .group("👥 03-usuarios")
+                .displayName("👥 Gestión de Usuarios")
+                .pathsToMatch("/patients/**", "/doctors/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi appointmentsGroup() {
+        return GroupedOpenApi.builder()
+                .group("📅 04-citas")
+                .displayName("📅 Sistema de Citas Médicas")
+                .pathsToMatch("/appointments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi medicalGroup() {
+        return GroupedOpenApi.builder()
+                .group("💊 05-medico")
+                .displayName("💊 Gestión Médica y Clínica")
+                .pathsToMatch("/medical-records/**", "/prescriptions/**", "/medical-attachments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi paymentsGroup() {
+        return GroupedOpenApi.builder()
+                .group("💰 06-pagos")
+                .displayName("💰 Sistema de Pagos y Facturación")
+                .pathsToMatch("/payments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi notificationsGroup() {
+        return GroupedOpenApi.builder()
+                .group("🔔 07-notificaciones")
+                .displayName("🔔 Sistema de Notificaciones")
+                .pathsToMatch("/notifications/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi analyticsGroup() {
+        return GroupedOpenApi.builder()
+                .group("📊 08-analytics")
+                .displayName("📊 Análisis, Reportes y Administración")
+                .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi chatbotGroup() {
+        return GroupedOpenApi.builder()
+                .group("🤖 09-chatbot")
+                .displayName("🤖 Asistente Virtual y Chatbot")
+                .pathsToMatch("/chatbot/**")
+                .build();
+    }
+
+}

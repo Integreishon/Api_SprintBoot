@@ -25,12 +25,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controlador para el chatbot
  */
 @RestController
-@RequestMapping("/api/chatbot")
+@RequestMapping("/chatbot")
 @RequiredArgsConstructor
+@Tag(name = "🤖 Chatbot", description = "Asistente virtual inteligente con base de conocimientos.")
 public class ChatbotController {
 
     private final ChatbotService chatbotService;
@@ -40,6 +44,7 @@ public class ChatbotController {
      * Enviar consulta al chatbot
      */
     @PostMapping("/query")
+    @Operation(summary = "Consultar chatbot", description = "Envía una pregunta al asistente virtual")
     public ResponseEntity<ApiResponse<ChatbotResponse>> query(
             @Valid @RequestBody ChatbotQueryRequest request,
             HttpServletRequest servletRequest) {
@@ -67,6 +72,7 @@ public class ChatbotController {
      * Obtener historial de conversaciones por sesión
      */
     @GetMapping("/conversations/{sessionId}")
+    @Operation(summary = "Historial de conversación", description = "Obtiene el historial completo de una sesión de chat")
     public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversationHistory(@PathVariable String sessionId) {
         List<ConversationResponse> history = chatbotService.getConversationHistory(sessionId);
         
@@ -77,6 +83,7 @@ public class ChatbotController {
      * Proporcionar feedback sobre una respuesta del chatbot
      */
     @PostMapping("/feedback")
+    @Operation(summary = "Enviar feedback", description = "Proporciona retroalimentación sobre las respuestas del chatbot")
     public ResponseEntity<ApiResponse<ConversationResponse>> provideFeedback(@Valid @RequestBody FeedbackRequest request) {
         ConversationResponse response = chatbotService.provideFeedback(request);
         
@@ -115,8 +122,9 @@ public class ChatbotController {
     /**
      * Crear una nueva entrada en la base de conocimientos
      */
-    @PostMapping("/knowledge")
+    @PostMapping("/knowledge-base")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Crear conocimiento", description = "Añade nueva información a la base de conocimientos")
     public ResponseEntity<ApiResponse<KnowledgeBaseEntryResponse>> createKnowledgeBaseEntry(
             @Valid @RequestBody KnowledgeBaseEntryRequest request) {
         
@@ -129,8 +137,9 @@ public class ChatbotController {
     /**
      * Obtener una entrada de la base de conocimientos por ID
      */
-    @GetMapping("/knowledge/{id}")
+    @GetMapping("/knowledge-base/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    @Operation(summary = "Obtener conocimiento", description = "Recupera una entrada específica de la base de conocimientos")
     public ResponseEntity<ApiResponse<KnowledgeBaseEntryResponse>> getKnowledgeBaseEntry(@PathVariable Long id) {
         KnowledgeBaseEntryResponse entry = knowledgeService.getKnowledgeBaseEntry(id);
         
@@ -140,8 +149,9 @@ public class ChatbotController {
     /**
      * Actualizar una entrada de la base de conocimientos
      */
-    @PutMapping("/knowledge/{id}")
+    @PutMapping("/knowledge-base/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Actualizar conocimiento", description = "Modifica una entrada existente en la base de conocimientos")
     public ResponseEntity<ApiResponse<KnowledgeBaseEntryResponse>> updateKnowledgeBaseEntry(
             @PathVariable Long id,
             @Valid @RequestBody KnowledgeBaseEntryRequest request) {
@@ -154,8 +164,9 @@ public class ChatbotController {
     /**
      * Eliminar una entrada de la base de conocimientos
      */
-    @DeleteMapping("/knowledge/{id}")
+    @DeleteMapping("/knowledge-base/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Eliminar conocimiento", description = "Elimina una entrada de la base de conocimientos")
     public ResponseEntity<ApiResponse<Void>> deleteKnowledgeBaseEntry(@PathVariable Long id) {
         knowledgeService.deleteKnowledgeBaseEntry(id);
         
@@ -165,8 +176,9 @@ public class ChatbotController {
     /**
      * Activar/desactivar una entrada de la base de conocimientos
      */
-    @PutMapping("/knowledge/{id}/toggle-active")
+    @PutMapping("/knowledge-base/{id}/toggle-active")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Activar/desactivar", description = "Cambia el estado activo de una entrada")
     public ResponseEntity<ApiResponse<KnowledgeBaseEntryResponse>> toggleActive(@PathVariable Long id) {
         KnowledgeBaseEntryResponse entry = knowledgeService.toggleActive(id);
         
@@ -178,8 +190,9 @@ public class ChatbotController {
     /**
      * Obtener entradas paginadas con filtros
      */
-    @GetMapping("/knowledge")
+    @GetMapping("/knowledge-base")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    @Operation(summary = "Listar conocimientos", description = "Obtiene la base de conocimientos con filtros")
     public ResponseEntity<ApiResponse<PageResponse<KnowledgeBaseEntryResponse>>> getKnowledgeBaseEntries(
             @RequestParam(required = false) Boolean isActive,
             @RequestParam(required = false) String topic,

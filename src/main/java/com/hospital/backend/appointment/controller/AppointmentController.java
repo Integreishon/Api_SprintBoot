@@ -33,7 +33,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/appointments")
-@Tag(name = "Appointment Controller", description = "API para la gestión de citas médicas")
+@Tag(name = "📅 Citas Médicas", description = "Sistema completo de agendamiento de citas: creación, consulta, cancelación, y verificación de disponibilidad de horarios.")
 @RequiredArgsConstructor
 public class AppointmentController {
 

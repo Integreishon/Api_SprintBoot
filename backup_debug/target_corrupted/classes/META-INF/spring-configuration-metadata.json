@@ -1,0 +1,78 @@
+{
+  "groups": [
+    {
+      "name": "app.jwt",
+      "type": "com.hospital.backend.config.JwtProperties",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "description": "JWT configuration properties for Hospital API authentication"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "JWT secret key for token signing and verification. Should be a strong, random string.",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "sourceMethod": "getSecret()"
+    },
+    {
+      "name": "app.jwt.expiration-time",
+      "type": "java.lang.Long",
+      "description": "JWT token expiration time in milliseconds. Default is 24 hours (86400000ms).",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "sourceMethod": "getExpirationTime()",
+      "defaultValue": 86400000
+    },
+    {
+      "name": "app.jwt.issuer",
+      "type": "java.lang.String",
+      "description": "JWT token issuer identifier. Used to identify who issued the token.",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "sourceMethod": "getIssuer()",
+      "defaultValue": "hospital-api"
+    },
+    {
+      "name": "app.jwt.token-prefix",
+      "type": "java.lang.String",
+      "description": "Prefix for JWT tokens in Authorization header (e.g., 'Bearer ').",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "sourceMethod": "getTokenPrefix()",
+      "defaultValue": "Bearer "
+    },
+    {
+      "name": "app.jwt.header-name",
+      "type": "java.lang.String",
+      "description": "HTTP header name where JWT token is expected (typically 'Authorization').",
+      "sourceType": "com.hospital.backend.config.JwtProperties",
+      "sourceMethod": "getHeaderName()",
+      "defaultValue": "Authorization"
+    }
+  ],
+  "hints": [
+    {
+      "name": "app.jwt.secret",
+      "values": [
+        {
+          "description": "Use a strong, random secret key for production environments"
+        }
+      ]
+    },
+    {
+      "name": "app.jwt.expiration-time",
+      "values": [
+        {
+          "value": 3600000,
+          "description": "1 hour"
+        },
+        {
+          "value": 86400000,
+          "description": "24 hours (default)"
+        },
+        {
+          "value": 604800000,
+          "description": "1 week"
+        }
+      ]
+    }
+  ]
+}

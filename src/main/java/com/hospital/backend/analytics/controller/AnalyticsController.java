@@ -13,12 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controlador para acceso a métricas y reportes analíticos
  */
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping("/analytics")
 @RequiredArgsConstructor
+@Tag(name = "📊 Analytics", description = "Análisis de datos y generación de reportes avanzados.")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
@@ -29,6 +33,7 @@ public class AnalyticsController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Generar análisis", description = "Genera métricas y gráficos personalizados según filtros")
     public ResponseEntity<ApiResponse<AnalyticsResponse>> getAnalytics(
             @Valid @RequestBody AnalyticsRequest request) {
         AnalyticsResponse response = analyticsService.generateAnalytics(request);
@@ -40,6 +45,7 @@ public class AnalyticsController {
      */
     @PostMapping("/export/pdf")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Exportar PDF", description = "Genera y descarga un reporte en formato PDF")
     public ResponseEntity<byte[]> exportPdfReport(@Valid @RequestBody AnalyticsRequest request) {
         byte[] reportBytes = reportService.generatePdfReport(request);
         
@@ -59,6 +65,7 @@ public class AnalyticsController {
      */
     @PostMapping("/export/excel")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Exportar Excel", description = "Genera y descarga un reporte en formato Excel")
     public ResponseEntity<byte[]> exportExcelReport(@Valid @RequestBody AnalyticsRequest request) {
         byte[] reportBytes = reportService.generateExcelReport(request);
         
@@ -78,6 +85,7 @@ public class AnalyticsController {
      */
     @PostMapping("/export/csv")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Exportar CSV", description = "Genera y descarga un reporte en formato CSV")
     public ResponseEntity<byte[]> exportCsvReport(@Valid @RequestBody AnalyticsRequest request) {
         byte[] reportBytes = reportService.generateCsvReport(request);
         

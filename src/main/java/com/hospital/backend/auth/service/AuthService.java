@@ -72,6 +72,19 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), expiresAt);
     }
     
+    @Transactional
+    public AuthResponse refreshToken(String email) {
+        User user = userRepository.findByEmailAndIsActive(email, true)
+                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        
+        String token = jwtTokenProvider.generateToken(user);
+        LocalDateTime expiresAt = DateUtils.nowInLima().plusSeconds(jwtTokenProvider.getExpirationTime() / 1000);
+        
+        log.info("Token renovado para usuario {}", user.getEmail());
+        
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), expiresAt);
+    }
+    
     private void validateRegisterRequest(RegisterRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new ValidationException("Las contraseñas no coinciden");

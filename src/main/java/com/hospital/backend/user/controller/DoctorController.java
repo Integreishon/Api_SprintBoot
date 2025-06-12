@@ -22,9 +22,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/doctors")
+@RequestMapping("/doctors")
 @RequiredArgsConstructor
-@Tag(name = "Doctores", description = "API para gestión de doctores")
+@Tag(name = "👨‍⚕️ Doctores", description = "Gestión de doctores: registro, especialidades, horarios y disponibilidad.")
 public class DoctorController {
 
     private final DoctorService doctorService;

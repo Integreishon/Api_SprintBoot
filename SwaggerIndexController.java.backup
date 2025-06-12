@@ -1,0 +1,76 @@
+package com.hospital.backend.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Controlador que intercepta la carga de Swagger UI para personalizar 
+ * su apariencia y funcionalidad
+ */
+@Controller
+public class SwaggerIndexController {
+
+    @Value("${server.servlet.context-path:/}")
+    private String contextPath;
+    
+    /**
+     * Intercepta la carga de Swagger UI para inyectar nuestro CSS y JS personalizado
+     * Usamos una ruta personalizada para evitar conflictos con el controlador predeterminado
+     */
+    @GetMapping("/custom-swagger-ui")
+    @ResponseBody
+    public void customSwaggerUI(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // Configurar la respuesta como HTML
+        response.setContentType("text/html;charset=UTF-8");
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        
+        // Leer la plantilla base de Swagger UI
+        try (InputStream is = getClass().getResourceAsStream("/META-INF/resources/webjars/springdoc-openapi-ui/swagger-ui/index.html");
+             PrintWriter writer = response.getWriter()) {
+            
+            if (is == null) {
+                // Si no se encuentra la plantilla, mostrar un mensaje de error
+                writer.write("<html><body><h1>Error: No se pudo cargar la interfaz de Swagger UI</h1><p>La plantilla no fue encontrada.</p></body></html>");
+                return;
+            }
+            
+            // Convertir el InputStream a String
+            String originalHtml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            
+            // Inyectar nuestros recursos personalizados justo antes del cierre del head
+            String customHeadContent = """
+                    <!-- Recursos personalizados del Hospital API -->
+                    <link rel="stylesheet" type="text/css" href="%s/swagger-ui-custom.css">
+                    <script defer src="%s/swagger-ui-custom.js"></script>
+                    """.formatted(contextPath, contextPath);
+            
+            // Reemplazar el título original y agregar nuestros recursos
+            String modifiedHtml = originalHtml
+                    .replace("<title>Swagger UI</title>", "<title>Hospital API Documentation</title>")
+                    .replace("</head>", customHeadContent + "</head>");
+            
+            // Escribir el HTML modificado como respuesta
+            writer.write(modifiedHtml);
+        }
+    }
+    
+    /**
+     * Redirección desde la URL raíz a Swagger UI para mejor UX
+     */
+    @GetMapping("/api-docs")
+    public RedirectView redirectToApiDocs(RedirectAttributes attributes) {
+        return new RedirectView(contextPath + "v3/api-docs");
+    }
+} 

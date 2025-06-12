@@ -20,12 +20,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controlador para la gestión de notificaciones
  */
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/notifications")
 @RequiredArgsConstructor
+@Tag(name = "🔔 Notificaciones", description = "Sistema de notificaciones: alertas, emails y comunicaciones.")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -35,6 +39,7 @@ public class NotificationController {
      */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    @Operation(summary = "Crear notificación", description = "Crea una nueva notificación para un usuario")
     public ResponseEntity<ApiResponse<NotificationResponse>> createNotification(@Valid @RequestBody CreateNotificationRequest request) {
         NotificationResponse createdNotification = notificationService.createNotification(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -46,6 +51,7 @@ public class NotificationController {
      */
     @PostMapping("/bulk")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Notificaciones masivas", description = "Crea múltiples notificaciones simultáneamente")
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> createBulkNotifications(@Valid @RequestBody BulkNotificationRequest request) {
         List<NotificationResponse> createdNotifications = notificationService.createBulkNotifications(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -57,6 +63,7 @@ public class NotificationController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT')")
+    @Operation(summary = "Obtener notificación", description = "Recupera una notificación específica por ID")
     public ResponseEntity<ApiResponse<NotificationResponse>> getNotificationById(@PathVariable Long id) {
         NotificationResponse notification = notificationService.getNotificationById(id);
         return ResponseEntity.ok(ApiResponse.success("Notificación obtenida exitosamente", notification));
@@ -67,6 +74,7 @@ public class NotificationController {
      */
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT')")
+    @Operation(summary = "Notificaciones por usuario", description = "Obtiene todas las notificaciones de un usuario")
     public ResponseEntity<ApiResponse<PageResponse<NotificationResponse>>> getNotificationsByUserId(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
@@ -102,6 +110,7 @@ public class NotificationController {
      */
     @PutMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT')")
+    @Operation(summary = "Marcar como leída", description = "Marca una notificación como leída")
     public ResponseEntity<ApiResponse<NotificationResponse>> markAsRead(@PathVariable Long id) {
         NotificationResponse notification = notificationService.markAsRead(id);
         return ResponseEntity.ok(ApiResponse.success("Notificación marcada como leída exitosamente", notification));

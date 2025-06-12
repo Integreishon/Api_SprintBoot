@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/patients")
+@RequestMapping("/patients")
 @RequiredArgsConstructor
-@Tag(name = "Pacientes", description = "API para gestión de pacientes")
+@Tag(name = "🧑‍⚕️ Pacientes", description = "Gestión completa de pacientes: registro, consulta, actualización y búsqueda por documentos. Control de acceso y validaciones.")
 public class PatientController {
     
     private final PatientService patientService;
