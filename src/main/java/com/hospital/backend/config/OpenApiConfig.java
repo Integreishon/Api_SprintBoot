@@ -50,93 +50,11 @@ public class OpenApiConfig {
                 .addSecurityItem(new SecurityRequirement().addList("JWT Authentication"));
     }
 
-    // CONFIGURACIÓN DEFINITIVA PARA GRUPOS QUE SÍ FUNCIONA
-    
-    @Bean
-    public GroupedOpenApi authenticationApi() {
-        return GroupedOpenApi.builder()
-                .group("authentication")
-                .displayName("🔐 Autenticación")
-                .pathsToMatch("/auth/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi usersApi() {
-        return GroupedOpenApi.builder()
-                .group("users")
-                .displayName("👥 Usuarios")
-                .pathsToMatch("/patients/**", "/doctors/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi appointmentsApi() {
-        return GroupedOpenApi.builder()
-                .group("appointments")
-                .displayName("📅 Citas")
-                .pathsToMatch("/appointments/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi catalogsApi() {
-        return GroupedOpenApi.builder()
-                .group("catalogs")
-                .displayName("📋 Catálogos")
-                .pathsToMatch("/specialties/**", "/document-types/**", "/payment-methods/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi medicalApi() {
-        return GroupedOpenApi.builder()
-                .group("medical")
-                .displayName("🏥 Médico")
-                .pathsToMatch("/medical-records/**", "/prescriptions/**", "/medical-attachments/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi paymentsApi() {
-        return GroupedOpenApi.builder()
-                .group("payments")
-                .displayName("💰 Pagos")
-                .pathsToMatch("/payments/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi notificationsApi() {
-        return GroupedOpenApi.builder()
-                .group("notifications")
-                .displayName("🔔 Notificaciones")
-                .pathsToMatch("/notifications/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi chatbotApi() {
-        return GroupedOpenApi.builder()
-                .group("chatbot")
-                .displayName("🤖 Chatbot")
-                .pathsToMatch("/chatbot/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi adminApi() {
-        return GroupedOpenApi.builder()
-                .group("admin")
-                .displayName("⚙️ Administración")
-                .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
-                .build();
-    }
-
+    // ORDEN CONTROLADO: "Todas las APIs" primero con prefijo 01
     @Bean
     public GroupedOpenApi allApisApi() {
         return GroupedOpenApi.builder()
-                .group("all")
+                .group("01-all")
                 .displayName("🌐 Todas las APIs")
                 .pathsToMatch("/**")
                 .addOpenApiCustomizer(openApi -> {
@@ -154,6 +72,87 @@ public class OpenApiConfig {
                                     .name("Hospital API Team")
                                     .email("dev@hospital.pe")));
                 })
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi authenticationApi() {
+        return GroupedOpenApi.builder()
+                .group("02-authentication")
+                .displayName("🔐 Autenticación y Sesiones")
+                .pathsToMatch("/auth/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi usersApi() {
+        return GroupedOpenApi.builder()
+                .group("03-users")
+                .displayName("👥 Pacientes y Doctores")
+                .pathsToMatch("/patients/**", "/doctors/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi appointmentsApi() {
+        return GroupedOpenApi.builder()
+                .group("04-appointments")
+                .displayName("📅 Citas Médicas")
+                .pathsToMatch("/appointments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi catalogsApi() {
+        return GroupedOpenApi.builder()
+                .group("05-catalogs")
+                .displayName("📋 Referencias")
+                .pathsToMatch("/specialties/**", "/document-types/**", "/payment-methods/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi medicalApi() {
+        return GroupedOpenApi.builder()
+                .group("06-medical")
+                .displayName("🏥 Historiales Médicos")
+                .pathsToMatch("/medical-records/**", "/prescriptions/**", "/medical-attachments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi paymentsApi() {
+        return GroupedOpenApi.builder()
+                .group("07-payments")
+                .displayName("💰 Facturación y Pagos")
+                .pathsToMatch("/payments/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi notificationsApi() {
+        return GroupedOpenApi.builder()
+                .group("08-notifications")
+                .displayName("🔔 Notificaciones")
+                .pathsToMatch("/notifications/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi chatbotApi() {
+        return GroupedOpenApi.builder()
+                .group("09-chatbot")
+                .displayName("🤖 Asistente Virtual")
+                .pathsToMatch("/chatbot/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi adminApi() {
+        return GroupedOpenApi.builder()
+                .group("10-admin")
+                .displayName("⚙️ Panel de Administración")
+                .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
                 .build();
     }
 }
