@@ -44,7 +44,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final EmailServiceInterface emailService;
     private final PushNotificationService pushNotificationService;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;

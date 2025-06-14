@@ -57,6 +57,7 @@ public class OpenApiConfig {
                 .group("01-all")
                 .displayName("🌐 Todas las APIs")
                 .pathsToMatch("/**")
+                .pathsToExclude("/actuator/**") // Excluir endpoints internos de Actuator
                 .addOpenApiCustomizer(openApi -> {
                     openApi.info(new Info()
                             .title("Hospital Management System API")
@@ -66,6 +67,8 @@ public class OpenApiConfig {
                                     API REST para operaciones hospitalarias completas.
                                     
                                     **🔑 Autenticación:** Use `/auth/login` → Botón "Authorize" → `Bearer {token}`
+                                    
+                                    **📊 Monitoreo:** Grupo "Monitoreo y Métricas" para health checks y métricas del sistema
                                     """)
                             .version("2.0.0")
                             .contact(new Contact()
@@ -148,9 +151,18 @@ public class OpenApiConfig {
     }
 
     @Bean
+    public GroupedOpenApi monitoringApi() {
+        return GroupedOpenApi.builder()
+                .group("10-monitoring")
+                .displayName("📊 Monitoreo y Métricas")
+                .pathsToMatch("/monitoring/**")
+                .build();
+    }
+
+    @Bean
     public GroupedOpenApi adminApi() {
         return GroupedOpenApi.builder()
-                .group("10-admin")
+                .group("11-admin")
                 .displayName("⚙️ Panel de Administración")
                 .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
                 .build();

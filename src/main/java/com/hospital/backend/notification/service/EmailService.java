@@ -10,6 +10,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -23,9 +24,10 @@ import java.nio.charset.StandardCharsets;
  * Servicio para el envío de emails
  */
 @Service
+@ConditionalOnProperty(name = "spring.mail.host", matchIfMissing = false)
 @RequiredArgsConstructor
 @Slf4j
-public class EmailService {
+public class EmailService implements EmailServiceInterface {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;

@@ -1,4 +1,4 @@
-// Configuración de Spring Security con JWT
+// Configuración de Spring Security con JWT - VERSIÓN LIMPIA
 package com.hospital.backend.config;
 
 import com.hospital.backend.security.JwtAuthenticationFilter;
@@ -35,37 +35,26 @@ public class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Autenticación pública - CON Y SIN /api prefix
+                // Autenticación pública
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
                 
-                // Catálogos públicos - CON Y SIN /api prefix
+                // Catálogos públicos
                 .requestMatchers("/document-types/**").permitAll()
-                .requestMatchers("/api/document-types/**").permitAll()
                 .requestMatchers("/specialties/**").permitAll()
-                .requestMatchers("/api/specialties/**").permitAll()
                 .requestMatchers("/payment-methods/**").permitAll()
-                .requestMatchers("/api/payment-methods/**").permitAll()
                 
-                // Chatbot público - CON Y SIN /api prefix
+                // Chatbot público
                 .requestMatchers("/chatbot/**").permitAll()
-                .requestMatchers("/api/chatbot/**").permitAll()
                 
-                // Swagger UI y documentación - CON Y SIN /api prefix - COMPLETO Y DETALLADO
+                // Swagger UI y documentación
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/api/swagger-ui/**", "/api/swagger-ui.html").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
-                .requestMatchers("/api/v3/api-docs/**", "/api/v3/api-docs").permitAll()
-                .requestMatchers("/v3/api-docs/swagger-config").permitAll() // RUTA CRÍTICA
-                .requestMatchers("/api/v3/api-docs/swagger-config").permitAll() // RUTA CRÍTICA
+                .requestMatchers("/v3/api-docs/swagger-config").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/webjars/**").permitAll()
-                .requestMatchers("/swagger-check").permitAll()
-                .requestMatchers("/api/swagger-check").permitAll()
                 
-                // Actuator - CON Y SIN /api prefix
+                // Actuator para monitoreo
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/actuator/**").permitAll()
                 
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()

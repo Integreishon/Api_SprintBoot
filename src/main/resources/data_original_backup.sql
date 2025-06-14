@@ -1,6 +1,6 @@
 -- ============================================================================
--- DATOS INICIALES PARA SISTEMA HOSPITALARIO - VERSIÓN CORREGIDA V3
--- SIN ON CONFLICT - Compatible con entidades Spring Boot JPA reales del proyecto
+-- DATOS INICIALES PARA SISTEMA HOSPITALARIO - VERSIÓN CORREGIDA
+-- Compatible con entidades Spring Boot JPA con @CreatedDate/@LastModifiedDate
 -- ============================================================================
 
 -- ============================================================================
@@ -11,7 +11,8 @@ VALUES
     ('DNI', 'Documento Nacional de Identidad', '^[0-9]{8}$', true, NOW(), NOW()),
     ('CE', 'Carnet de Extranjería', '^[0-9]{9}$', true, NOW(), NOW()),
     ('PAS', 'Pasaporte', '^[A-Z0-9]{6,12}$', true, NOW(), NOW()),
-    ('CED', 'Cédula de Identidad', '^[0-9]{8,12}$', true, NOW(), NOW());
+    ('CED', 'Cédula de Identidad', '^[0-9]{8,12}$', true, NOW(), NOW())
+ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
 -- ESPECIALIDADES MÉDICAS (specialties)
@@ -27,31 +28,34 @@ VALUES
     ('Oftalmología', 'Cuidado de los ojos y la visión', 100.00, 0.00, 30, true, NOW(), NOW()),
     ('Neurología', 'Tratamiento del sistema nervioso', 140.00, 0.00, 60, true, NOW(), NOW()),
     ('Psiquiatría', 'Salud mental y trastornos psiquiátricos', 120.00, 0.00, 60, true, NOW(), NOW()),
-    ('Endocrinología', 'Tratamiento de trastornos hormonales', 110.00, 0.00, 45, true, NOW(), NOW());
+    ('Endocrinología', 'Tratamiento de trastornos hormonales', 110.00, 0.00, 45, true, NOW(), NOW())
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
--- MÉTODOS DE PAGO (payment_methods) - ESTRUCTURA SIMPLIFICADA
+-- MÉTODOS DE PAGO (payment_methods)
 -- ============================================================================
-INSERT INTO payment_methods (name, type, processing_fee, is_active, created_at, updated_at)
+INSERT INTO payment_methods (name, type, processing_fee, is_active, integration_code, created_at, updated_at)
 VALUES 
-    ('Efectivo', 'CASH', 0.00, true, NOW(), NOW()),
-    ('Visa', 'CREDIT_CARD', 3.50, true, NOW(), NOW()),
-    ('Mastercard', 'CREDIT_CARD', 3.50, true, NOW(), NOW()),
-    ('Tarjeta de Débito', 'DEBIT_CARD', 2.00, true, NOW(), NOW()),
-    ('Transferencia Bancaria', 'BANK_TRANSFER', 5.00, true, NOW(), NOW()),
-    ('Seguro Médico', 'INSURANCE', 0.00, true, NOW(), NOW());
+    ('Efectivo', 'CASH', 0.00, true, 'CASH_001', NOW(), NOW()),
+    ('Visa', 'CREDIT_CARD', 3.50, true, 'VISA_001', NOW(), NOW()),
+    ('Mastercard', 'CREDIT_CARD', 3.50, true, 'MC_001', NOW(), NOW()),
+    ('Tarjeta de Débito', 'DEBIT_CARD', 2.00, true, 'DEBIT_001', NOW(), NOW()),
+    ('Transferencia Bancaria', 'BANK_TRANSFER', 5.00, true, 'TRANSFER_001', NOW(), NOW()),
+    ('Seguro Médico', 'INSURANCE', 0.00, true, 'INSURANCE_001', NOW(), NOW())
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
--- USUARIOS DEL SISTEMA (users) - PASSWORDS CONOCIDOS
+-- USUARIOS DEL SISTEMA (users) - Passwords hasheados con BCrypt
 -- ============================================================================
 INSERT INTO users (email, password_hash, role, is_active, created_at, updated_at)
 VALUES 
     ('admin@hospital.pe', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFjZPiACmUNJnH6', 'ADMIN', true, NOW(), NOW()),
     ('doctor@hospital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'DOCTOR', true, NOW(), NOW()),
-    ('paciente@hospital.pe', '$2a$12$qrQcKBpUkrb7Q8w6mUzyne4f1ZO5k8VehJUEC8aBUvdgfkSQKNHu.', 'PATIENT', true, NOW(), NOW());
+    ('paciente@hospital.pe', '$2a$12$6Tf3cB6Qw5UGjwIl.hJm6Ok3cF7CZF8qCNMkVjlmljVYLqFM2QNXm', 'PATIENT', true, NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================================
--- CONFIGURACIONES DEL HOSPITAL (hospital_settings) - ESTRUCTURA CORREGIDA
+-- CONFIGURACIONES DEL HOSPITAL (hospital_settings)
 -- ============================================================================
 INSERT INTO hospital_settings (setting_key, setting_value, data_type, description, category, is_public, is_editable, created_by, updated_by, created_at, updated_at)
 VALUES 
@@ -61,29 +65,33 @@ VALUES
     ('hospital.email', 'contacto@hospitalsanjuan.pe', 'STRING', 'Email de contacto', 'GENERAL', true, true, 'system', 'system', NOW(), NOW()),
     ('appointment.reminder_hours', '24', 'INTEGER', 'Horas antes de enviar recordatorio de cita', 'APPOINTMENT', false, true, 'system', 'system', NOW(), NOW()),
     ('appointment.max_per_doctor_day', '20', 'INTEGER', 'Máximo de citas por doctor por día', 'APPOINTMENT', false, true, 'system', 'system', NOW(), NOW()),
+    ('appointment.cancellation_hours', '24', 'INTEGER', 'Horas mínimas para cancelar sin penalidad', 'APPOINTMENT', true, true, 'system', 'system', NOW(), NOW()),
     ('chatbot.enabled', 'true', 'BOOLEAN', 'Si el chatbot está activo', 'SYSTEM', false, true, 'system', 'system', NOW(), NOW()),
-    ('system.maintenance_mode', 'false', 'BOOLEAN', 'Modo de mantenimiento del sistema', 'SYSTEM', false, true, 'system', 'system', NOW(), NOW());
+    ('system.maintenance_mode', 'false', 'BOOLEAN', 'Modo de mantenimiento del sistema', 'SYSTEM', false, true, 'system', 'system', NOW(), NOW()),
+    ('payment.online_enabled', 'true', 'BOOLEAN', 'Habilitar pagos en línea', 'PAYMENT', false, true, 'system', 'system', NOW(), NOW())
+ON CONFLICT (setting_key) DO NOTHING;
 
 -- ============================================================================
--- BASE DE CONOCIMIENTOS DEL CHATBOT (chatbot_knowledge_base) - ESTRUCTURA CORREGIDA
+-- BASE DE CONOCIMIENTOS DEL CHATBOT (chatbot_knowledge_base)
 -- ============================================================================
-INSERT INTO chatbot_knowledge_base (topic, question, answer, keywords, data_type, is_active, priority, category, subcategory, usage_count, success_rate, created_by, updated_by, created_at, updated_at)
+INSERT INTO chatbot_knowledge_base (question, answer, topic, category, subcategory, keywords, priority, usage_count, success_rate, is_active, data_type, created_by, updated_by, created_at, updated_at)
 VALUES 
-    ('Citas Médicas', '¿Cómo agendar una cita médica?', 'Para agendar una cita médica puedes llamar al (01) 234-5678, usar nuestra plataforma web, o acercarte directamente al hospital. Necesitarás tu DNI y especificar la especialidad que requieres.', 'cita,agendar,reservar,appointment', 'STRING', true, 5, 'PROCEDIMIENTOS', 'AGENDAMIENTO', 0, 1.0, 'system', 'system', NOW(), NOW()),
+    ('¿Cómo agendar una cita médica?', 'Para agendar una cita médica puedes llamar al (01) 234-5678, usar nuestra plataforma web, o acercarte directamente al hospital. Necesitarás tu DNI y especificar la especialidad que requieres.', 'Citas Médicas', 'PROCEDIMIENTOS', 'AGENDAMIENTO', 'cita,agendar,reservar,appointment', 1, 0, 1.0, true, 'STRING', 'system', 'system', NOW(), NOW()),
     
-    ('Documentación', '¿Qué documentos necesito para atenderme?', 'Para atenderte en nuestro hospital necesitas: DNI o documento de identidad válido, carnet de seguro (si tienes), y cualquier resultado médico previo que sea relevante para tu consulta.', 'documentos,dni,carnet,requisitos', 'STRING', true, 5, 'REQUISITOS', 'DOCUMENTOS', 0, 1.0, 'system', 'system', NOW(), NOW()),
+    ('¿Qué documentos necesito para atenderme?', 'Para atenderte en nuestro hospital necesitas: DNI o documento de identidad válido, carnet de seguro (si tienes), y cualquier resultado médico previo que sea relevante para tu consulta.', 'Documentación', 'REQUISITOS', 'DOCUMENTOS', 'documentos,dni,carnet,requisitos', 1, 0, 1.0, true, 'STRING', 'system', 'system', NOW(), NOW()),
     
-    ('Horarios', '¿Cuáles son los horarios de atención?', 'Nuestros horarios de atención son de Lunes a Viernes de 8:00 AM a 8:00 PM, y Sábados de 8:00 AM a 2:00 PM. Emergencias las 24 horas.', 'horarios,atención,emergencias', 'STRING', true, 5, 'INFORMACIÓN', 'HORARIOS', 0, 1.0, 'system', 'system', NOW(), NOW()),
+    ('¿Cuáles son los horarios de atención?', 'Nuestros horarios de atención son de Lunes a Viernes de 8:00 AM a 8:00 PM, y Sábados de 8:00 AM a 2:00 PM. Emergencias las 24 horas.', 'Horarios', 'INFORMACIÓN', 'HORARIOS', 'horarios,atención,emergencias', 1, 0, 1.0, true, 'STRING', 'system', 'system', NOW(), NOW()),
     
-    ('Especialidades', '¿Qué especialidades médicas tienen disponibles?', 'Contamos con: Medicina General, Cardiología, Dermatología, Pediatría, Ginecología, Traumatología, Oftalmología, Neurología, Psiquiatría y Endocrinología.', 'especialidades,doctores,médicos', 'STRING', true, 5, 'SERVICIOS', 'ESPECIALIDADES', 0, 1.0, 'system', 'system', NOW(), NOW()),
+    ('¿Qué especialidades médicas tienen disponibles?', 'Contamos con: Medicina General, Cardiología, Dermatología, Pediatría, Ginecología, Traumatología, Oftalmología, Neurología, Psiquiatría y Endocrinología.', 'Especialidades', 'SERVICIOS', 'ESPECIALIDADES', 'especialidades,doctores,médicos', 1, 0, 1.0, true, 'STRING', 'system', 'system', NOW(), NOW()),
     
-    ('Pagos', '¿Cómo puedo pagar mi consulta?', 'Aceptamos efectivo, tarjetas de crédito y débito (Visa, Mastercard), transferencias bancarias y seguros médicos. También puedes pagar en línea a través de nuestra plataforma.', 'pagar,pago,tarjeta,efectivo,seguro', 'STRING', true, 5, 'FINANCIERO', 'METODOS_PAGO', 0, 1.0, 'system', 'system', NOW(), NOW());
+    ('¿Cómo puedo pagar mi consulta?', 'Aceptamos efectivo, tarjetas de crédito y débito (Visa, Mastercard), transferencias bancarias y seguros médicos. También puedes pagar en línea a través de nuestra plataforma.', 'Pagos', 'FINANCIERO', 'METODOS_PAGO', 'pagar,pago,tarjeta,efectivo,seguro', 1, 0, 1.0, true, 'STRING', 'system', 'system', NOW(), NOW())
+ON CONFLICT (question) DO NOTHING;
 
 -- ============================================================================
--- DATOS DE PRUEBA PARA DESARROLLO - SIMPLIFICADOS
+-- DATOS DE PRUEBA PARA DESARROLLO
 -- ============================================================================
 
--- Paciente de prueba (insertar solo si el usuario existe)
+-- Paciente de prueba
 INSERT INTO patients (user_id, document_type_id, document_number, first_name, last_name, birth_date, gender, phone, address, created_at, updated_at)
 SELECT 
     u.id, 
@@ -102,7 +110,7 @@ WHERE u.email = 'paciente@hospital.pe'
   AND dt.code = 'DNI'
   AND NOT EXISTS (SELECT 1 FROM patients WHERE user_id = u.id);
 
--- Doctor de prueba (insertar solo si el usuario existe)
+-- Doctor de prueba
 INSERT INTO doctors (user_id, cmp_number, first_name, last_name, phone, consultation_room, is_active, hire_date, created_at, updated_at)
 SELECT 
     u.id,
@@ -119,7 +127,7 @@ FROM users u
 WHERE u.email = 'doctor@hospital.pe'
   AND NOT EXISTS (SELECT 1 FROM doctors WHERE cmp_number = 'CMP123456');
 
--- Especialidad del doctor (insertar solo si ambos existen)
+-- Especialidad del doctor
 INSERT INTO doctor_specialties (doctor_id, specialty_id, is_primary, certification_date, created_at, updated_at)
 SELECT 
     d.id,
