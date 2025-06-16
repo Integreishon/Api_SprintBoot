@@ -83,27 +83,26 @@ VALUES
 -- DATOS DE PRUEBA PARA DESARROLLO - SIMPLIFICADOS
 -- ============================================================================
 
--- Paciente de prueba (insertar solo si el usuario existe)
-INSERT INTO patients (user_id, document_type_id, document_number, first_name, last_name, birth_date, gender, phone, address, created_at, updated_at)
-SELECT 
-    u.id, 
-    dt.id,
-    '12345678',
-    'Juan Carlos',
-    'Pérez González',
-    '1985-03-15',
+INSERT INTO patients (
+    user_id, document_type_id, document_number, first_name, last_name,
+    birth_date, gender, phone, address, created_at, updated_at
+)
+VALUES (
+   3,                      -- id del usuario relacionado
+    1,                      -- id del tipo de documento (DNI, por ejemplo)
+    '87654321',
+    'Carlos',
+    'López',
+    '1990-05-20',
     'MALE',
-    '987654321',
-    'Jr. Los Olivos 456, San Isidro, Lima',
+    '912345678',
+    'Av. Lima 123, Lima',
     NOW(),
     NOW()
-FROM users u, document_types dt 
-WHERE u.email = 'paciente@hospital.pe' 
-  AND dt.code = 'DNI'
-  AND NOT EXISTS (SELECT 1 FROM patients WHERE user_id = u.id);
+);
 
 -- Doctor de prueba (insertar solo si el usuario existe)
-INSERT INTO doctors (user_id, cmp_number, first_name, last_name, phone, consultation_room, is_active, hire_date, created_at, updated_at)
+INSERT INTO doctors (user_id, cmp_number, first_name, last_name, phone, consultation_room, is_active, hire_date, profile_image, created_at, updated_at)
 SELECT 
     u.id,
     'CMP123456',
@@ -113,6 +112,7 @@ SELECT
     '205',
     true,
     '2020-01-15',
+    NULL,
     NOW(),
     NOW()
 FROM users u 

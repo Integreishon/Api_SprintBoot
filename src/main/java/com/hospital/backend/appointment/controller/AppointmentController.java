@@ -43,17 +43,19 @@ public class AppointmentController {
     @GetMapping
     @Operation(summary = "Listar todas las citas", description = "Obtiene una lista paginada de todas las citas")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-    public ResponseEntity<PageResponse<AppointmentResponse>> findAll(
+    public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> findAll(
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(appointmentService.findAll(pageable));
+        PageResponse<AppointmentResponse> appointments = appointmentService.findAll(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Citas recuperadas exitosamente", appointments));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener una cita por ID", description = "Retorna una cita por su ID")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST')")
-    public ResponseEntity<AppointmentResponse> findById(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> findById(
             @PathVariable Long id) {
-        return ResponseEntity.ok(appointmentService.findById(id));
+        AppointmentResponse appointment = appointmentService.findById(id);
+        return ResponseEntity.ok(ApiResponse.success("Cita encontrada", appointment));
     }
 
     @GetMapping("/patient/{patientId}")
@@ -95,10 +97,11 @@ public class AppointmentController {
     @PostMapping
     @Operation(summary = "Crear una cita", description = "Crea una nueva cita")
     @PreAuthorize("hasAnyRole('ADMIN', 'PATIENT', 'RECEPTIONIST')")
-    public ResponseEntity<AppointmentResponse> create(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> create(
             @RequestBody @Valid CreateAppointmentRequest request) {
         AppointmentResponse createdAppointment = appointmentService.create(request);
-        return new ResponseEntity<>(createdAppointment, HttpStatus.CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Cita creada exitosamente", createdAppointment));
     }
 
     @PutMapping("/{id}")

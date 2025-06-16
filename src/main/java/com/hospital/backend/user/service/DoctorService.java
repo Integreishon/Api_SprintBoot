@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ public class DoctorService {
     private final DoctorSpecialtyRepository doctorSpecialtyRepository;
     private final SpecialtyRepository specialtyRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
     @Transactional(readOnly = true)
     public DoctorResponse findById(Long id) {
@@ -72,7 +74,7 @@ public class DoctorService {
         // Crear usuario
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPasswordHash(request.getPassword());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.DOCTOR);
         user.setIsActive(true);
         user = userRepository.save(user);
@@ -87,6 +89,7 @@ public class DoctorService {
         doctor.setPhone(request.getPhone());
         doctor.setConsultationRoom(request.getConsultationRoom());
         doctor.setHireDate(request.getHireDate() != null ? request.getHireDate() : LocalDate.now());
+        doctor.setProfileImage(request.getProfileImage());
         doctor.setIsActive(true);
         
         Doctor savedDoctor = doctorRepository.save(doctor);
@@ -124,6 +127,7 @@ public class DoctorService {
         doctor.setSecondLastName(request.getSecondLastName());
         doctor.setPhone(request.getPhone());
         doctor.setConsultationRoom(request.getConsultationRoom());
+        doctor.setProfileImage(request.getProfileImage());
         
         // Actualizar usuario si existe
         if (doctor.getUser() != null) {
@@ -228,6 +232,7 @@ public class DoctorService {
         response.setConsultationRoom(doctor.getConsultationRoom());
         response.setIsActive(doctor.getIsActive());
         response.setHireDate(doctor.getHireDate());
+        response.setProfileImage(doctor.getProfileImage());
         
         // Mapear especialidades
         if (doctor.getSpecialties() != null) {

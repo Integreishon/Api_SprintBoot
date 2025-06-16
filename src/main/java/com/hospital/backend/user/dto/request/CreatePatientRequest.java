@@ -46,12 +46,12 @@ public class CreatePatientRequest {
     private BloodType bloodType;
     
     @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Formato de teléfono inválido")
+    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Teléfono inválido (7-15 dígitos, solo números y +)")
     private String phone;
     
     private String emergencyContactName;
     
-    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Formato de teléfono de emergencia inválido")
+    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Teléfono de emergencia inválido (7-15 dígitos)")
     private String emergencyContactPhone;
     
     private String address;

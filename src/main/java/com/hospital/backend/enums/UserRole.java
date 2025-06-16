@@ -5,5 +5,5 @@ public enum UserRole {
     PATIENT,
     DOCTOR,
     ADMIN,
-    SUPERADMIN
+
 }

@@ -19,7 +19,7 @@ public class CreateDoctorRequest {
     private String password;
     
     @NotBlank(message = "El número CMP es obligatorio")
-    @Pattern(regexp = "^[0-9]{5,8}$", message = "Formato de CMP inválido")
+    @Pattern(regexp = "^[0-9]{6}$", message = "El CMP debe tener exactamente 9 dígitos")
     private String cmpNumber;
     
     @NotBlank(message = "El nombre es obligatorio")
@@ -34,13 +34,16 @@ public class CreateDoctorRequest {
     private String secondLastName;
     
     @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Formato de teléfono inválido")
+    @Pattern(regexp = "^9[0-9]{8}$", message = "El teléfono debe tener 9 dígitos y empezar con 9")
     private String phone;
+
     
     private String consultationRoom;
     
     @PastOrPresent(message = "La fecha de contratación no puede ser futura")
     private LocalDate hireDate;
+    
+    private String profileImage;
     
     @NotEmpty(message = "Debe especificar al menos una especialidad")
     private List<Long> specialtyIds;

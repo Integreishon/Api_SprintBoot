@@ -23,6 +23,7 @@ public class DoctorResponse {
     private Boolean isActive;
     private LocalDate hireDate;
     private String biography;
+    private String profileImage;
     private List<DoctorSpecialtyDto> specialties;
     private Long primarySpecialtyId;
     private String primarySpecialtyName;

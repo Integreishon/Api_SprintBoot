@@ -8,6 +8,7 @@ import com.hospital.backend.user.dto.response.DoctorAvailabilityResponse;
 import com.hospital.backend.user.dto.response.DoctorResponse;
 import com.hospital.backend.user.service.DoctorAvailabilityService;
 import com.hospital.backend.user.service.DoctorService;
+import com.hospital.backend.user.service.ProfileImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/doctors")
@@ -29,12 +31,14 @@ public class DoctorController {
 
     private final DoctorService doctorService;
     private final DoctorAvailabilityService availabilityService;
+    private final ProfileImageService profileImageService;
     
     @GetMapping
     @Operation(summary = "Listar todos los doctores", description = "Obtiene un listado paginado de doctores")
-    public ResponseEntity<PageResponse<DoctorResponse>> getAllDoctors(
+    public ResponseEntity<ApiResponse<PageResponse<DoctorResponse>>> getAllDoctors(
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(doctorService.findAll(pageable));
+        PageResponse<DoctorResponse> doctors = doctorService.findAll(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Doctores recuperados exitosamente", doctors));
     }
     
     @GetMapping("/{id}")
@@ -47,18 +51,20 @@ public class DoctorController {
     
     @GetMapping("/specialty/{specialtyId}")
     @Operation(summary = "Listar doctores por especialidad", description = "Obtiene un listado paginado de doctores filtrados por especialidad")
-    public ResponseEntity<PageResponse<DoctorResponse>> getDoctorsBySpecialty(
+    public ResponseEntity<ApiResponse<PageResponse<DoctorResponse>>> getDoctorsBySpecialty(
             @PathVariable Long specialtyId,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(doctorService.findBySpecialty(specialtyId, pageable));
+        PageResponse<DoctorResponse> doctors = doctorService.findBySpecialty(specialtyId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Doctores por especialidad recuperados", doctors));
     }
     
     @GetMapping("/search")
     @Operation(summary = "Buscar doctores", description = "Busca doctores por nombre o apellido")
-    public ResponseEntity<PageResponse<DoctorResponse>> searchDoctors(
+    public ResponseEntity<ApiResponse<PageResponse<DoctorResponse>>> searchDoctors(
             @RequestParam String query,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(doctorService.searchDoctors(query, pageable));
+        PageResponse<DoctorResponse> doctors = doctorService.searchDoctors(query, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Búsqueda completada", doctors));
     }
     
     @PostMapping
@@ -119,4 +125,24 @@ public class DoctorController {
         availabilityService.deleteAvailability(availabilityId);
         return ResponseEntity.ok(ApiResponse.success("Horario eliminado", null));
     }
+    
+    // Endpoint opcional para subir imagen de perfil (puedes implementar en el futuro)
+   
+    @PostMapping("/{id}/profile-image")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Subir imagen de perfil", description = "Sube una imagen de perfil para el doctor")
+    public ResponseEntity<ApiResponse<DoctorResponse>> uploadProfileImage(
+            @PathVariable Long id,
+            @RequestParam("image") MultipartFile imageFile) {
+        try {
+            String imageUrl = profileImageService.saveProfileImage(imageFile, id);
+            // Aquí necesitarías actualizar el doctor con la nueva imagen
+            // DoctorResponse updatedDoctor = doctorService.updateProfileImage(id, imageUrl);
+            return ResponseEntity.ok(ApiResponse.success("Imagen subida exitosamente", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error al subir imagen: " + e.getMessage()));
+        }
+    }
+   
 }

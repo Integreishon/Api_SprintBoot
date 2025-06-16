@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Uploads - Ignorar archivos subidos pero mantener estructura ###
+uploads/**/*
+!uploads/**/.gitkeep

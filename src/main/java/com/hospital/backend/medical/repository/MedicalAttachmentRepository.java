@@ -23,25 +23,14 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
      * Buscar archivos por paciente
      */
     Page<MedicalAttachment> findByPatientId(Long patientId, Pageable pageable);
-    
-    /**
-     * Buscar archivos por registro médico
-     */
+
     List<MedicalAttachment> findByMedicalRecordId(Long medicalRecordId);
     
-    /**
-     * Buscar archivos por tipo
-     */
+
     Page<MedicalAttachment> findByFileType(FileType fileType, Pageable pageable);
     
-    /**
-     * Buscar archivos por fuente de carga
-     */
     Page<MedicalAttachment> findByUploadSource(UploadSource uploadSource, Pageable pageable);
-    
-    /**
-     * Buscar archivos públicos
-     */
+ 
     Page<MedicalAttachment> findByIsPublicTrue(Pageable pageable);
     
     /**
@@ -79,15 +68,9 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
      * Contar archivos por tipo
      */
     long countByFileType(FileType fileType);
-    
-    /**
-     * Contar archivos por fuente de carga
-     */
+   
     long countByUploadSource(UploadSource uploadSource);
-    
-    /**
-     * Buscar archivos por paciente, tipo y rango de fechas
-     */
+
     @Query("SELECT ma FROM MedicalAttachment ma WHERE ma.patient.id = :patientId AND ma.fileType = :fileType AND ma.uploadDate BETWEEN :startDate AND :endDate")
     Page<MedicalAttachment> findByPatientIdAndFileTypeAndUploadDateBetween(
             @Param("patientId") Long patientId,

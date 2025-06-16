@@ -5,6 +5,8 @@ import com.hospital.backend.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -15,6 +17,8 @@ public class RegisterRequest {
     private String email;
     
     @NotBlank(message = "La contraseña es requerida")
+    @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z]|.*[0-9]).+$", message = "La contraseña debe tener al menos una minúscula y una mayúscula o número")
     private String password;
     
     @NotBlank(message = "La confirmación de contraseña es requerida")

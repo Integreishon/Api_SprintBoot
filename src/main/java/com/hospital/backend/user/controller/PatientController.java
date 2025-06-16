@@ -30,9 +30,10 @@ public class PatientController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Listar todos los pacientes", description = "Obtiene un listado paginado de pacientes")
-    public ResponseEntity<PageResponse<PatientResponse>> getAllPatients(
+    public ResponseEntity<ApiResponse<PageResponse<PatientResponse>>> getAllPatients(
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(patientService.findAll(pageable));
+        PageResponse<PatientResponse> patients = patientService.findAll(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Pacientes recuperados exitosamente", patients));
     }
     
     @GetMapping("/{id}")
@@ -47,10 +48,11 @@ public class PatientController {
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Buscar pacientes", description = "Busca pacientes por nombre o apellido")
-    public ResponseEntity<PageResponse<PatientResponse>> searchPatients(
+    public ResponseEntity<ApiResponse<PageResponse<PatientResponse>>> searchPatients(
             @RequestParam String query,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(patientService.searchPatients(query, pageable));
+        PageResponse<PatientResponse> patients = patientService.searchPatients(query, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Búsqueda completada", patients));
     }
     
     @GetMapping("/document")
