@@ -13,8 +13,8 @@ public class CreatePrescriptionRequest {
     @NotNull(message = "El ID del registro médico es requerido")
     private Long medicalRecordId;
     
-    @NotBlank(message = "La medicación es requerida")
-    private String medication;
+    @NotBlank(message = "El nombre del medicamento es requerido")
+    private String medicationName;
     
     @NotBlank(message = "La dosis es requerida")
     private String dosage;

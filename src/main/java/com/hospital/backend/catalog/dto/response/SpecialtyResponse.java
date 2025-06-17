@@ -16,6 +16,5 @@ public class SpecialtyResponse {
     private BigDecimal consultationPrice;
     private BigDecimal discountPercentage;
     private BigDecimal finalPrice; // Precio con descuento aplicado
-    private Integer averageDuration;
     private Boolean isActive;
 } 

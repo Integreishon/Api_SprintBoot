@@ -51,9 +51,6 @@ public class Payment extends BaseEntity {
     @Column(name = "status", nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;
     
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
-    
     @Column(name = "receipt_number", length = 50)
     private String receiptNumber;
     
@@ -63,24 +60,69 @@ public class Payment extends BaseEntity {
     @Column(name = "payer_email", length = 150)
     private String payerEmail;
     
+    // =========================
     // Métodos de negocio
+    // =========================
     
+    /**
+     * Verificar si el pago está completado
+     */
     public boolean isCompleted() {
         return this.status == PaymentStatus.COMPLETED;
     }
     
+    /**
+     * Verificar si el pago puede ser reembolsado
+     */
     public boolean canRefund() {
         return this.status == PaymentStatus.COMPLETED;
     }
     
+    /**
+     * Verificar si el pago está pendiente
+     */
+    public boolean isPending() {
+        return this.status == PaymentStatus.PENDING;
+    }
+    
+    /**
+     * Verificar si el pago falló
+     */
+    public boolean isFailed() {
+        return this.status == PaymentStatus.FAILED;
+    }
+    
+    /**
+     * Marcar el pago como completado
+     */
     public void markAsPaid(String transactionReference) {
         this.status = PaymentStatus.COMPLETED;
         this.paymentDate = LocalDateTime.now();
         this.transactionReference = transactionReference;
     }
     
-    public void markAsRefunded(String notes) {
-        this.status = PaymentStatus.REFUNDED;
-        this.notes = notes;
+    /**
+     * Marcar el pago como fallido
+     */
+    public void markAsFailed() {
+        this.status = PaymentStatus.FAILED;
+        this.paymentDate = LocalDateTime.now();
     }
-} 
+    
+    /**
+     * Marcar el pago como reembolsado
+     */
+    public void markAsRefunded() {
+        this.status = PaymentStatus.REFUNDED;
+    }
+    
+    /**
+     * Calcular el monto total incluyendo fees
+     */
+    public void calculateTotalAmount() {
+        if (amount != null) {
+            BigDecimal fee = processingFee != null ? processingFee : BigDecimal.ZERO;
+            this.totalAmount = amount.add(fee);
+        }
+    }
+}

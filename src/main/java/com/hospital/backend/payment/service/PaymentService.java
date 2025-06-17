@@ -16,6 +16,7 @@ import com.hospital.backend.payment.dto.PaymentSummaryResponse;
 import com.hospital.backend.payment.entity.Payment;
 import com.hospital.backend.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -47,9 +49,11 @@ public class PaymentService {
      */
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request) {
+        log.info("Creando nuevo pago para cita: {}", request.getAppointmentId());
+        
         // Buscar la cita
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", request.getAppointmentId()));
         
         // Verificar que la cita no tenga ya un pago
         paymentRepository.findByAppointmentId(appointment.getId())
@@ -59,7 +63,7 @@ public class PaymentService {
         
         // Buscar el método de pago
         PaymentMethod paymentMethod = paymentMethodRepository.findById(request.getPaymentMethodId())
-                .orElseThrow(() -> new ResourceNotFoundException("Método de pago no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentMethod", "id", request.getPaymentMethodId()));
         
         // Verificar que el método de pago esté activo
         if (!paymentMethod.getIsActive()) {
@@ -68,12 +72,7 @@ public class PaymentService {
         
         // Calcular monto y comisión
         BigDecimal amount = request.getAmount() != null ? request.getAmount() : appointment.getPrice();
-        BigDecimal processingFee = BigDecimal.ZERO;
-        
-        if (paymentMethod.getProcessingFee() != null) {
-            processingFee = amount.multiply(paymentMethod.getProcessingFee().divide(new BigDecimal(100)));
-        }
-        
+        BigDecimal processingFee = calculateProcessingFee(amount, paymentMethod);
         BigDecimal totalAmount = amount.add(processingFee);
         
         // Crear el pago
@@ -86,17 +85,15 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PENDING);
         payment.setPayerName(request.getPayerName());
         payment.setPayerEmail(request.getPayerEmail());
-        payment.setNotes(request.getNotes());
         payment.setTransactionReference(request.getTransactionReference());
         
-        // Si viene con referencia de transacción, marcar como pagado
+        // Calcular el total incluyendo fees
+        payment.calculateTotalAmount();
+        
+        // Si viene con referencia de transacción, marcar como pagado automáticamente
         if (request.getTransactionReference() != null && !request.getTransactionReference().isEmpty()) {
             payment.markAsPaid(request.getTransactionReference());
-            
-            // Actualizar estado de la cita a confirmada
-            appointment.setStatus(AppointmentStatus.CONFIRMED);
-            appointment.setPaymentStatus(PaymentStatus.COMPLETED);
-            appointmentRepository.save(appointment);
+            log.info("Pago marcado como completado automáticamente con referencia: {}", request.getTransactionReference());
         }
         
         // Generar número de recibo
@@ -105,7 +102,7 @@ public class PaymentService {
         // Guardar el pago
         payment = paymentRepository.save(payment);
         
-        // Retornar respuesta
+        log.info("Pago creado exitosamente con ID: {}", payment.getId());
         return mapToPaymentResponse(payment);
     }
     
@@ -114,8 +111,10 @@ public class PaymentService {
      */
     @Transactional
     public PaymentResponse confirmPayment(Long id, String transactionReference) {
+        log.info("Confirmando pago con ID: {}", id);
+        
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw new BusinessException("Solo se pueden confirmar pagos pendientes");
@@ -125,11 +124,26 @@ public class PaymentService {
         payment.markAsPaid(transactionReference);
         payment = paymentRepository.save(payment);
         
-        // Actualizar estado de la cita
-        Appointment appointment = payment.getAppointment();
-        appointment.setStatus(AppointmentStatus.CONFIRMED);
-        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
-        appointmentRepository.save(appointment);
+        log.info("Pago confirmado exitosamente");
+        return mapToPaymentResponse(payment);
+    }
+    
+    /**
+     * Marca un pago como fallido
+     */
+    @Transactional
+    public PaymentResponse markPaymentAsFailed(Long id) {
+        log.info("Marcando pago como fallido con ID: {}", id);
+        
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
+        
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            throw new BusinessException("Solo se pueden marcar como fallidos los pagos pendientes");
+        }
+        
+        payment.markAsFailed();
+        payment = paymentRepository.save(payment);
         
         return mapToPaymentResponse(payment);
     }
@@ -138,32 +152,31 @@ public class PaymentService {
      * Reembolsa un pago
      */
     @Transactional
-    public PaymentResponse refundPayment(Long id, String notes) {
+    public PaymentResponse refundPayment(Long id) {
+        log.info("Procesando reembolso para pago con ID: {}", id);
+        
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
         if (!payment.canRefund()) {
-            throw new BusinessException("Este pago no puede ser reembolsado");
+            throw new BusinessException("Este pago no puede ser reembolsado. Estado actual: " + payment.getStatus());
         }
         
         // Marcar como reembolsado
-        payment.markAsRefunded(notes);
+        payment.markAsRefunded();
         payment = paymentRepository.save(payment);
         
-        // Actualizar estado de la cita
-        Appointment appointment = payment.getAppointment();
-        appointment.setPaymentStatus(PaymentStatus.REFUNDED);
-        appointmentRepository.save(appointment);
-        
+        log.info("Reembolso procesado exitosamente");
         return mapToPaymentResponse(payment);
     }
     
     /**
      * Obtiene un pago por su ID
      */
+    @Transactional(readOnly = true)
     public PaymentResponse getPayment(Long id) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
         return mapToPaymentResponse(payment);
     }
@@ -171,6 +184,7 @@ public class PaymentService {
     /**
      * Obtiene un pago por ID de cita
      */
+    @Transactional(readOnly = true)
     public PaymentResponse getPaymentByAppointment(Long appointmentId) {
         Payment payment = paymentRepository.findByAppointmentId(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe pago para esta cita"));
@@ -181,32 +195,50 @@ public class PaymentService {
     /**
      * Lista pagos paginados
      */
+    @Transactional(readOnly = true)
     public PageResponse<PaymentResponse> getAllPayments(Pageable pageable) {
         Page<Payment> paymentsPage = paymentRepository.findAll(pageable);
-        Page<PaymentResponse> paymentResponses = paymentsPage.map(this::mapToPaymentResponse);
-        return new PageResponse<>(paymentResponses);
+        Page<PaymentResponse> mappedPage = paymentsPage.map(this::mapToPaymentResponse);
+        return new PageResponse<>(mappedPage);
     }
     
     /**
      * Lista pagos por estado
      */
+    @Transactional(readOnly = true)
     public PageResponse<PaymentResponse> getPaymentsByStatus(PaymentStatus status, Pageable pageable) {
         Page<Payment> paymentsPage = paymentRepository.findByStatus(status, pageable);
-        Page<PaymentResponse> paymentResponses = paymentsPage.map(this::mapToPaymentResponse);
-        return new PageResponse<>(paymentResponses);
+        Page<PaymentResponse> mappedPage = paymentsPage.map(this::mapToPaymentResponse);
+        return new PageResponse<>(mappedPage);
+    }
+    
+    /**
+     * Obtiene pagos por rango de fechas
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<PaymentResponse> getPaymentsByDateRange(LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        
+        Page<Payment> paymentsPage = paymentRepository.findByPaymentDateBetween(startDateTime, endDateTime, pageable);
+        Page<PaymentResponse> mappedPage = paymentsPage.map(this::mapToPaymentResponse);
+        return new PageResponse<>(mappedPage);
     }
     
     /**
      * Genera reportes de pagos por período
      */
+    @Transactional(readOnly = true)
     public PaymentSummaryResponse generatePaymentSummary(LocalDate startDate, LocalDate endDate) {
+        log.info("Generando resumen de pagos desde {} hasta {}", startDate, endDate);
+        
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
         
         // Obtener todos los pagos en el rango de fechas
-        List<Payment> payments = paymentRepository.findByPaymentDateBetween(startDateTime, endDateTime);
+        List<Payment> payments = paymentRepository.findByCreatedAtBetween(startDateTime, endDateTime);
         
-        // Calcular totales
+        // Inicializar contadores y totales
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalFees = BigDecimal.ZERO;
         
@@ -219,48 +251,50 @@ public class PaymentService {
         long completedCount = 0;
         long pendingCount = 0;
         long refundedCount = 0;
-        long cancelledCount = 0;
+        long failedCount = 0;
         
         for (Payment payment : payments) {
-            // Sólo considerar pagos completados para ingresos
-            if (payment.getStatus() == PaymentStatus.COMPLETED) {
-                totalRevenue = totalRevenue.add(payment.getAmount());
-                totalFees = totalFees.add(payment.getProcessingFee() != null ? payment.getProcessingFee() : BigDecimal.ZERO);
-                
-                // Clasificar por tipo de pago
-                PaymentMethodType type = payment.getPaymentMethod().getType();
-                BigDecimal amount = payment.getTotalAmount();
-                
-                switch (type) {
-                    case CASH:
-                        cashPayments = cashPayments.add(amount);
-                        break;
-                    case CREDIT_CARD:
-                    case DEBIT_CARD:
-                        cardPayments = cardPayments.add(amount);
-                        break;
-                    case BANK_TRANSFER:
-                        transferPayments = transferPayments.add(amount);
-                        break;
-                    case INSURANCE:
-                        insurancePayments = insurancePayments.add(amount);
-                        break;
-                    case ONLINE:
-                        onlinePayments = onlinePayments.add(amount);
-                        break;
-                    default:
-                        // Para OTHER u otros tipos no especificados
-                        onlinePayments = onlinePayments.add(amount);
-                        break;
-                }
-                
-                completedCount++;
-            } else if (payment.getStatus() == PaymentStatus.PENDING) {
-                pendingCount++;
-            } else if (payment.getStatus() == PaymentStatus.REFUNDED) {
-                refundedCount++;
-            } else if (payment.getStatus() == PaymentStatus.FAILED) {
-                cancelledCount++;
+            PaymentStatus status = payment.getStatus();
+            
+            // Contar por estado
+            switch (status) {
+                case COMPLETED:
+                    completedCount++;
+                    totalRevenue = totalRevenue.add(payment.getAmount());
+                    totalFees = totalFees.add(payment.getProcessingFee() != null ? payment.getProcessingFee() : BigDecimal.ZERO);
+                    
+                    // Clasificar por tipo de pago
+                    BigDecimal amount = payment.getTotalAmount();
+                    PaymentMethodType type = payment.getPaymentMethod().getType();
+                    
+                    switch (type) {
+                        case CASH:
+                            cashPayments = cashPayments.add(amount);
+                            break;
+                        case CREDIT_CARD:
+                        case DEBIT_CARD:
+                            cardPayments = cardPayments.add(amount);
+                            break;
+                        case BANK_TRANSFER:
+                            transferPayments = transferPayments.add(amount);
+                            break;
+                        case INSURANCE:
+                            insurancePayments = insurancePayments.add(amount);
+                            break;
+                        default:
+                            onlinePayments = onlinePayments.add(amount);
+                            break;
+                    }
+                    break;
+                case PENDING:
+                    pendingCount++;
+                    break;
+                case REFUNDED:
+                    refundedCount++;
+                    break;
+                case FAILED:
+                    failedCount++;
+                    break;
             }
         }
         
@@ -269,7 +303,7 @@ public class PaymentService {
         
         // Calcular promedio por transacción
         BigDecimal averageAmount = completedCount > 0 ? 
-                totalRevenue.divide(new BigDecimal(completedCount), RoundingMode.HALF_UP) : 
+                totalRevenue.divide(BigDecimal.valueOf(completedCount), 2, RoundingMode.HALF_UP) : 
                 BigDecimal.ZERO;
         
         // Crear y retornar el resumen
@@ -287,10 +321,26 @@ public class PaymentService {
                 .completedPayments(completedCount)
                 .pendingPayments(pendingCount)
                 .refundedPayments(refundedCount)
-                .cancelledPayments(cancelledCount)
+                .failedPayments(failedCount)
                 .startDate(startDate)
                 .endDate(endDate)
                 .build();
+    }
+    
+    // =========================
+    // Métodos privados auxiliares
+    // =========================
+    
+    /**
+     * Calcula la comisión de procesamiento
+     */
+    private BigDecimal calculateProcessingFee(BigDecimal amount, PaymentMethod paymentMethod) {
+        if (paymentMethod.getProcessingFee() == null) {
+            return BigDecimal.ZERO;
+        }
+        
+        return amount.multiply(paymentMethod.getProcessingFee())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
     
     /**
@@ -326,8 +376,8 @@ public class PaymentService {
                 .receiptNumber(payment.getReceiptNumber())
                 .payerName(payment.getPayerName())
                 .payerEmail(payment.getPayerEmail())
-                .notes(payment.getNotes())
                 .createdAt(payment.getCreatedAt())
+                .updatedAt(payment.getUpdatedAt())
                 .build();
     }
 }

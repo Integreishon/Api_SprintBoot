@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,56 +21,208 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    // Buscar pago por ID de cita
+    // =========================
+    // Consultas básicas
+    // =========================
+    
+    /**
+     * Buscar pago por ID de cita
+     */
     Optional<Payment> findByAppointmentId(Long appointmentId);
     
-    // Listar pagos por estado
+    /**
+     * Verificar si existe un pago para una cita
+     */
+    boolean existsByAppointmentId(Long appointmentId);
+    
+    /**
+     * Buscar por número de recibo
+     */
+    Optional<Payment> findByReceiptNumber(String receiptNumber);
+    
+    /**
+     * Buscar por referencia de transacción
+     */
+    Optional<Payment> findByTransactionReference(String transactionReference);
+    
+    // =========================
+    // Consultas por estado
+    // =========================
+    
+    /**
+     * Listar pagos por estado
+     */
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
     
-    // Listar pagos por método de pago
+    /**
+     * Listar pagos por estado ordenados por fecha
+     */
+    Page<Payment> findByStatusOrderByCreatedAtDesc(PaymentStatus status, Pageable pageable);
+    
+    /**
+     * Contar pagos por estado
+     */
+    Long countByStatus(PaymentStatus status);
+    
+    // =========================
+    // Consultas por fechas
+    // =========================
+    
+    /**
+     * Buscar pagos por rango de fechas de pago
+     */
+    List<Payment> findByPaymentDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+    
+    /**
+     * Buscar pagos por rango de fechas de pago con paginación
+     */
+    Page<Payment> findByPaymentDateBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    
+    /**
+     * Buscar pagos por rango de fechas de creación
+     */
+    List<Payment> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    
+    /**
+     * Buscar pagos por rango de fechas de creación con paginación
+     */
+    Page<Payment> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    
+    // =========================
+    // Consultas por método de pago
+    // =========================
+    
+    /**
+     * Listar pagos por tipo de método de pago
+     */
     @Query("SELECT p FROM Payment p JOIN p.paymentMethod pm WHERE pm.type = :type")
     Page<Payment> findByPaymentMethodType(@Param("type") PaymentMethodType type, Pageable pageable);
     
-    // Buscar pagos por rango de fechas
-    @Query("SELECT p FROM Payment p WHERE p.paymentDate BETWEEN :startDate AND :endDate")
-    List<Payment> findByPaymentDateBetween(
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+    /**
+     * Contar pagos por tipo de método de pago
+     */
+    @Query("SELECT COUNT(p) FROM Payment p JOIN p.paymentMethod pm WHERE pm.type = :type")
+    Long countByPaymentMethodType(@Param("type") PaymentMethodType type);
     
-    // Calcular monto total de pagos completados por rango de fechas
-    @Query("SELECT SUM(p.totalAmount) FROM Payment p WHERE p.status = 'PAID' AND p.paymentDate BETWEEN :startDate AND :endDate")
-    BigDecimal calculateTotalRevenue(
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+    // =========================
+    // Consultas por entidades relacionadas
+    // =========================
     
-    // Obtener pagos por paciente
-    @Query("SELECT p FROM Payment p JOIN p.appointment a JOIN a.patient pat WHERE pat.id = :patientId")
+    /**
+     * Obtener pagos por paciente
+     */
+    @Query("SELECT p FROM Payment p JOIN p.appointment a JOIN a.patient pat WHERE pat.id = :patientId ORDER BY p.createdAt DESC")
     Page<Payment> findByPatientId(@Param("patientId") Long patientId, Pageable pageable);
     
-    // Obtener pagos por doctor
-    @Query("SELECT p FROM Payment p JOIN p.appointment a JOIN a.doctor d WHERE d.id = :doctorId")
+    /**
+     * Obtener pagos por doctor
+     */
+    @Query("SELECT p FROM Payment p JOIN p.appointment a JOIN a.doctor d WHERE d.id = :doctorId ORDER BY p.createdAt DESC")
     Page<Payment> findByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
     
-    // Contar pagos por estado y rango de fechas
-    @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = :status AND p.paymentDate BETWEEN :startDate AND :endDate")
-    Long countByStatusAndDateRange(
-            @Param("status") PaymentStatus status,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p")
+    /**
+     * Obtener pagos por especialidad
+     */
+    @Query("SELECT p FROM Payment p JOIN p.appointment a JOIN a.specialty s WHERE s.id = :specialtyId ORDER BY p.createdAt DESC")
+    Page<Payment> findBySpecialtyId(@Param("specialtyId") Long specialtyId, Pageable pageable);
+    
+    // =========================
+    // Estadísticas y reportes
+    // =========================
+    
+    /**
+     * Calcular ingresos totales por estado y rango de fechas
+     */
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE " +
+           "p.status = :status AND " +
+           "p.paymentDate BETWEEN :startDate AND :endDate")
+    BigDecimal calculateRevenueByStatusAndDateRange(@Param("status") PaymentStatus status,
+                                                   @Param("startDate") LocalDateTime startDate,
+                                                   @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Calcular comisiones totales por rango de fechas
+     */
+    @Query("SELECT COALESCE(SUM(p.processingFee), 0) FROM Payment p WHERE " +
+           "p.status = 'COMPLETED' AND " +
+           "p.paymentDate BETWEEN :startDate AND :endDate")
+    BigDecimal calculateTotalFeesByDateRange(@Param("startDate") LocalDateTime startDate,
+                                           @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Contar pagos por estado y rango de fechas
+     */
+    @Query("SELECT COUNT(p) FROM Payment p WHERE " +
+           "p.status = :status AND " +
+           "p.createdAt BETWEEN :startDate AND :endDate")
+    Long countByStatusAndDateRange(@Param("status") PaymentStatus status,
+                                  @Param("startDate") LocalDateTime startDate,
+                                  @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Calcular ingresos por tipo de método de pago
+     */
+    @Query("SELECT pm.type, COALESCE(SUM(p.amount), 0) FROM Payment p " +
+           "JOIN p.paymentMethod pm WHERE " +
+           "p.status = 'COMPLETED' AND " +
+           "p.paymentDate BETWEEN :startDate AND :endDate " +
+           "GROUP BY pm.type")
+    List<Object[]> calculateRevenueByPaymentMethodType(@Param("startDate") LocalDateTime startDate,
+                                                      @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Obtener resumen de pagos por mes
+     */
+    @Query("SELECT YEAR(p.paymentDate), MONTH(p.paymentDate), COUNT(p), COALESCE(SUM(p.amount), 0) " +
+           "FROM Payment p WHERE p.status = 'COMPLETED' " +
+           "GROUP BY YEAR(p.paymentDate), MONTH(p.paymentDate) " +
+           "ORDER BY YEAR(p.paymentDate) DESC, MONTH(p.paymentDate) DESC")
+    List<Object[]> getMonthlyPaymentSummary();
+    
+    /**
+     * Calcular ingresos diarios para el último mes
+     */
+    @Query("SELECT DATE(p.paymentDate), COALESCE(SUM(p.amount), 0) FROM Payment p " +
+           "WHERE p.status = 'COMPLETED' AND " +
+           "p.paymentDate >= :startDate " +
+           "GROUP BY DATE(p.paymentDate) " +
+           "ORDER BY DATE(p.paymentDate)")
+    List<Object[]> calculateDailyRevenueForLastMonth(@Param("startDate") LocalDateTime startDate);
+    
+    // =========================
+    // Consultas de validación
+    // =========================
+    
+    /**
+     * Verificar si existe un pago completado para una cita
+     */
+    @Query("SELECT COUNT(p) > 0 FROM Payment p WHERE " +
+           "p.appointment.id = :appointmentId AND " +
+           "p.status = 'COMPLETED'")
+    boolean existsCompletedPaymentForAppointment(@Param("appointmentId") Long appointmentId);
+    
+    /**
+     * Calcular ingresos totales
+     */
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = 'COMPLETED'")
     BigDecimal calculateTotalRevenue();
     
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
-           "WHERE p.createdAt BETWEEN :start AND :end")
-    BigDecimal calculateRevenueForDateRange(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end);
+    /**
+     * Calcular ingresos en un rango de fechas
+     */
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE " +
+           "p.status = 'COMPLETED' AND " +
+           "p.paymentDate BETWEEN :startDate AND :endDate")
+    BigDecimal calculateRevenueForDateRange(@Param("startDate") LocalDateTime startDate,
+                                           @Param("endDate") LocalDateTime endDate);
     
-    @Query("SELECT DATE(p.createdAt) as date, COALESCE(SUM(p.amount), 0) as amount " +
-           "FROM Payment p " +
-           "WHERE p.createdAt >= :startDate " +
-           "GROUP BY DATE(p.createdAt) " +
-           "ORDER BY date")
-    List<Object[]> calculateRevenuePerDayForLastWeek();
-} 
+    /**
+     * Calcular ingresos por día para la última semana
+     */
+    @Query("SELECT DATE(p.paymentDate), COALESCE(SUM(p.amount), 0) FROM Payment p WHERE " +
+           "p.status = 'COMPLETED' AND " +
+           "p.paymentDate >= :startDate " +
+           "GROUP BY DATE(p.paymentDate) " +
+           "ORDER BY DATE(p.paymentDate)")
+    List<Object[]> calculateRevenuePerDayForLastWeek(@Param("startDate") LocalDateTime startDate);
+}

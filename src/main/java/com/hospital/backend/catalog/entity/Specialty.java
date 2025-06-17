@@ -32,9 +32,6 @@ public class Specialty extends BaseEntity {
     @Column(name = "discount_percentage", precision = 5, scale = 2)
     private BigDecimal discountPercentage;
     
-    @Column(name = "average_duration", nullable = false)
-    private Integer averageDuration = 30; // Duración en minutos
-    
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
     

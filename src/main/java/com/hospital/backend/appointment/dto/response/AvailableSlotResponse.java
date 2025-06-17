@@ -1,35 +1,58 @@
 package com.hospital.backend.appointment.dto.response;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 /**
- * DTO para la respuesta de slots de tiempo disponibles para citas
+ * DTO de respuesta para slots de tiempo disponibles
  */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class AvailableSlotResponse {
-
-    private Long doctorId;
-    private String doctorName;
-    private Long specialtyId;
-    private String specialtyName;
-    private LocalDate date;
-    private String dayOfWeek;
-    private Integer slotDuration; // en minutos
-    private List<TimeSlot> availableSlots;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TimeSlot {
-        private String startTime;
-        private String endTime;
-        private Boolean available;
+    
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private Integer duration; // en minutos
+    private boolean available;
+    private String displayTime; // Formato para mostrar (ej: "09:00 - 09:30")
+    
+    // Constructor sin displayTime (se calcula automáticamente)
+    public AvailableSlotResponse(LocalTime startTime, LocalTime endTime, Integer duration, boolean available) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.duration = duration;
+        this.available = available;
+        this.displayTime = generateDisplayTime();
     }
-} 
+    
+    /**
+     * Generar formato de display automáticamente
+     */
+    private String generateDisplayTime() {
+        if (startTime != null && endTime != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            return startTime.format(formatter) + " - " + endTime.format(formatter);
+        }
+        return "";
+    }
+    
+    /**
+     * Actualizar displayTime cuando se cambian los tiempos
+     */
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+        this.displayTime = generateDisplayTime();
+    }
+    
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+        this.displayTime = generateDisplayTime();
+    }
+}

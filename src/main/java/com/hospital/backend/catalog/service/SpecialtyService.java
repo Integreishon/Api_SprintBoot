@@ -75,7 +75,6 @@ public class SpecialtyService {
         specialty.setDescription(request.getDescription());
         specialty.setConsultationPrice(request.getConsultationPrice());
         specialty.setDiscountPercentage(request.getDiscountPercentage());
-        specialty.setAverageDuration(request.getAverageDuration());
         specialty.setIsActive(request.getIsActive());
         
         Specialty savedSpecialty = specialtyRepository.save(specialty);
@@ -98,7 +97,6 @@ public class SpecialtyService {
         specialty.setDescription(request.getDescription());
         specialty.setConsultationPrice(request.getConsultationPrice());
         specialty.setDiscountPercentage(request.getDiscountPercentage());
-        specialty.setAverageDuration(request.getAverageDuration());
         specialty.setIsActive(request.getIsActive());
         
         Specialty updatedSpecialty = specialtyRepository.save(specialty);
@@ -131,7 +129,6 @@ public class SpecialtyService {
         response.setConsultationPrice(specialty.getConsultationPrice());
         response.setDiscountPercentage(specialty.getDiscountPercentage());
         response.setFinalPrice(specialty.getFinalPrice());
-        response.setAverageDuration(specialty.getAverageDuration());
         response.setIsActive(specialty.getIsActive());
         return response;
     }

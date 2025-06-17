@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,8 +36,8 @@ public class PrescriptionService {
         prescription.setMedicalRecord(medicalRecord);
         prescription.setPatient(medicalRecord.getPatient());
         prescription.setDoctor(medicalRecord.getDoctor());
-        prescription.setIssueDate(LocalDateTime.now());
-        prescription.setMedicationName(request.getMedication());
+        prescription.setIssueDate(LocalDate.now());
+        prescription.setMedicationName(request.getMedicationName());
         prescription.setDosage(request.getDosage());
         prescription.setFrequency(request.getFrequency());
         prescription.setDuration(request.getDuration());
@@ -95,21 +95,12 @@ public class PrescriptionService {
                 .doctorName(prescription.getDoctor().getFirstName() + " " + prescription.getDoctor().getLastName())
                 .medicalRecordId(prescription.getMedicalRecord().getId())
                 .issueDate(prescription.getIssueDate())
-                .expiryDate(prescription.getExpiryDate())
                 .medicationName(prescription.getMedicationName())
                 .dosage(prescription.getDosage())
                 .frequency(prescription.getFrequency())
                 .duration(prescription.getDuration())
                 .instructions(prescription.getInstructions())
-                .notes(prescription.getNotes())
-                .quantity(prescription.getQuantity())
-                .refills(prescription.getRefills())
                 .active(prescription.getActive())
-                .dispensed(prescription.getDispensed())
-                .dispensedDate(prescription.getDispensedDate())
-                .dispensedBy(prescription.getDispensedBy())
-                .createdAt(prescription.getCreatedAt())
-                .updatedAt(prescription.getUpdatedAt())
                 .build();
     }
 } 

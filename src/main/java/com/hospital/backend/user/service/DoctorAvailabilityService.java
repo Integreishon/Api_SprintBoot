@@ -114,7 +114,9 @@ public class DoctorAvailabilityService {
     @Transactional(readOnly = true)
     public boolean isDoctorAvailableOnDayAndTime(Long doctorId, int dayOfWeek, LocalTime time) {
         Optional<DoctorAvailability> availability = doctorAvailabilityRepository
-                .findByDoctorIdAndDayOfWeek(doctorId, dayOfWeek);
+                .findByDoctorIdAndDayOfWeek(doctorId, dayOfWeek)
+                .stream()
+                .findFirst();
         
         return availability.map(avail -> 
             !time.isBefore(avail.getStartTime()) && !time.isAfter(avail.getEndTime())

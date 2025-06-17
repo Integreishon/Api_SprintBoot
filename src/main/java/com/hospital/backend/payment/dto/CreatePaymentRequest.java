@@ -1,5 +1,6 @@
 package com.hospital.backend.payment.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -22,14 +23,14 @@ public class CreatePaymentRequest {
     @NotNull(message = "El método de pago es obligatorio")
     private Long paymentMethodId;
     
+    @NotNull(message = "El monto es obligatorio")
     @Positive(message = "El monto debe ser mayor a cero")
     private BigDecimal amount;
     
     private String payerName;
     
+    @Email(message = "El email debe tener un formato válido")
     private String payerEmail;
     
-    private String notes;
-    
     private String transactionReference;
-} 
+}

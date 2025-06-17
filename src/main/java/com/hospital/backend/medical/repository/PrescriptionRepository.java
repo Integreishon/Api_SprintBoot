@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -20,24 +20,11 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
     /**
      * Buscar recetas por paciente
      */
-    @Query("SELECT p FROM Prescription p JOIN p.medicalRecord mr JOIN mr.appointment a " +
-           "WHERE a.patient.id = :patientId " +
-           "AND (:startDate IS NULL OR a.appointmentDate >= :startDate) " +
-           "AND (:endDate IS NULL OR a.appointmentDate <= :endDate)")
+    @Query("SELECT p FROM Prescription p WHERE p.patient.id = :patientId " +
+           "AND (:startDate IS NULL OR p.issueDate >= :startDate) " +
+           "AND (:endDate IS NULL OR p.issueDate <= :endDate)")
     List<Prescription> findByPatientId(
             @Param("patientId") Long patientId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate);
-    
-    /**
-     * Buscar recetas por doctor
-     */
-    @Query("SELECT p FROM Prescription p JOIN p.medicalRecord mr JOIN mr.appointment a " +
-           "WHERE a.doctor.id = :doctorId " +
-           "AND (:startDate IS NULL OR a.appointmentDate >= :startDate) " +
-           "AND (:endDate IS NULL OR a.appointmentDate <= :endDate)")
-    List<Prescription> findByDoctorId(
-            @Param("doctorId") Long doctorId,
             @Param("startDate") String startDate,
             @Param("endDate") String endDate);
     
@@ -63,8 +50,8 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
      */
     @Query("SELECT p FROM Prescription p WHERE p.issueDate BETWEEN :startDate AND :endDate")
     Page<Prescription> findByIssueDateBetween(
-            @Param("startDate") LocalDateTime startDate, 
-            @Param("endDate") LocalDateTime endDate, 
+            @Param("startDate") LocalDate startDate, 
+            @Param("endDate") LocalDate endDate, 
             Pageable pageable);
     
     /**
@@ -72,14 +59,6 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
      */
     @Query("SELECT p FROM Prescription p WHERE LOWER(p.medicationName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Prescription> findByMedicationNameContainingIgnoreCase(@Param("searchTerm") String searchTerm, Pageable pageable);
-    
-    /**
-     * Buscar recetas que expiran pronto
-     */
-    @Query("SELECT p FROM Prescription p WHERE p.active = true AND p.expiryDate BETWEEN :startDate AND :endDate")
-    List<Prescription> findExpiringPrescriptions(
-            @Param("startDate") LocalDateTime startDate, 
-            @Param("endDate") LocalDateTime endDate);
     
     /**
      * Contar recetas por paciente
@@ -96,14 +75,4 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
      */
     @Query("SELECT COUNT(p) FROM Prescription p WHERE LOWER(p.medicationName) LIKE LOWER(CONCAT('%', :medicationName, '%'))")
     long countByMedicationName(@Param("medicationName") String medicationName);
-    
-    /**
-     * Buscar recetas por doctor y rango de fechas
-     */
-    @Query("SELECT p FROM Prescription p WHERE p.doctor.id = :doctorId AND p.issueDate BETWEEN :startDate AND :endDate")
-    Page<Prescription> findByDoctorIdAndIssueDateBetween(
-            @Param("doctorId") Long doctorId,
-            @Param("startDate") LocalDateTime startDate, 
-            @Param("endDate") LocalDateTime endDate, 
-            Pageable pageable);
 } 

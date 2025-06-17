@@ -31,9 +31,5 @@ public class SpecialtyRequest {
     @Min(value = 0, message = "El descuento no puede ser negativo")
     private BigDecimal discountPercentage;
     
-    @NotNull(message = "La duración promedio es obligatoria")
-    @Min(value = 10, message = "La duración mínima debe ser de 10 minutos")
-    private Integer averageDuration = 30;
-    
     private Boolean isActive = true;
 } 

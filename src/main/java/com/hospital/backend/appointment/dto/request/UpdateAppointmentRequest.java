@@ -1,40 +1,31 @@
 package com.hospital.backend.appointment.dto.request;
 
-import com.hospital.backend.enums.AppointmentStatus;
 import jakarta.validation.constraints.FutureOrPresent;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * DTO para la actualización de una cita médica existente
+ * DTO para actualizar una cita médica existente
  */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateAppointmentRequest {
-
-    @FutureOrPresent(message = "La fecha debe ser el día de hoy o posterior")
+    
+    @FutureOrPresent(message = "La fecha de la cita debe ser hoy o en el futuro")
     private LocalDate appointmentDate;
-
+    
     private LocalTime startTime;
-
-    @Size(min = 10, max = 500, message = "El motivo debe tener entre 10 y 500 caracteres")
+    
+    @NotBlank(message = "El motivo de la consulta no puede estar vacío")
     private String reason;
-
-    private String notes;
-
-    @NotNull(message = "El estado de la cita es obligatorio")
-    private AppointmentStatus status;
-
-    private Boolean inPerson;
-
-    private String virtualMeetingUrl;
     
     private String cancellationReason;
-} 
+}

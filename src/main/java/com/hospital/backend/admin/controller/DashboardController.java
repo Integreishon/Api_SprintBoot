@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hospital.backend.admin.dto.DashboardResponse;
 import com.hospital.backend.admin.service.DashboardService;
+import com.hospital.backend.common.dto.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +21,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * Proporciona métricas y estadísticas del hospital
  */
 @RestController
-@RequestMapping("/admin/dashboard")
+@RequestMapping("/api/admin/dashboard")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "📈 Dashboard", description = "Panel administrativo con métricas y estadísticas del hospital.")
+@Tag(name = "Dashboard", description = "Panel administrativo con métricas y estadísticas del hospital")
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -34,23 +35,31 @@ public class DashboardController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Métricas del dashboard", description = "Obtiene todas las estadísticas principales del hospital")
-    public ResponseEntity<DashboardResponse> getDashboardMetrics() {
-        log.info("GET /api/dashboard - Obteniendo métricas del dashboard");
-        return ResponseEntity.ok(dashboardService.getDashboardMetrics());
+    @Operation(summary = "Obtener métricas del dashboard")
+    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
+        log.info("GET /api/admin/dashboard - Obteniendo métricas del dashboard");
+        
+        DashboardResponse metrics = dashboardService.getDashboardMetrics();
+        
+        return ResponseEntity.ok(
+            ApiResponse.success("Métricas del dashboard obtenidas exitosamente", metrics)
+        );
     }
     
     /**
      * Actualiza y obtiene métricas frescas del dashboard administrativo
-     * Fuerza recálculo de métricas sin usar caché
      * @return Respuesta con todas las métricas actualizadas
      */
     @GetMapping("/refresh")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Actualizar métricas", description = "Fuerza la actualización de todas las estadísticas")
-    public ResponseEntity<DashboardResponse> refreshDashboardMetrics() {
-        log.info("GET /api/dashboard/refresh - Actualizando métricas del dashboard");
-        // En una implementación real, aquí se forzaría un recálculo completo sin usar caché
-        return ResponseEntity.ok(dashboardService.getDashboardMetrics());
+    @Operation(summary = "Actualizar métricas del dashboard")
+    public ResponseEntity<ApiResponse<DashboardResponse>> refreshDashboardMetrics() {
+        log.info("GET /api/admin/dashboard/refresh - Actualizando métricas del dashboard");
+        
+        DashboardResponse metrics = dashboardService.getDashboardMetrics();
+        
+        return ResponseEntity.ok(
+            ApiResponse.success("Métricas del dashboard actualizadas exitosamente", metrics)
+        );
     }
-} 
+}

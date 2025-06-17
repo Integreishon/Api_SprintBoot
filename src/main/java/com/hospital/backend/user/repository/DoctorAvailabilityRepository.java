@@ -1,4 +1,3 @@
-// Repository para disponibilidad horaria de doctores
 package com.hospital.backend.user.repository;
 
 import com.hospital.backend.user.entity.DoctorAvailability;
@@ -9,70 +8,92 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Optional;
 
+/**
+ * Repository para operaciones con horarios de disponibilidad de doctores
+ */
 @Repository
 public interface DoctorAvailabilityRepository extends JpaRepository<DoctorAvailability, Long> {
     
-    List<DoctorAvailability> findByDoctorId(Long doctorId);
+    /**
+     * Buscar horarios de un doctor por día de la semana
+     */
+    @Query("SELECT da FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId AND " +
+           "da.dayOfWeek = :dayOfWeek AND " +
+           "da.isActive = :isActive")
+    List<DoctorAvailability> findByDoctorIdAndDayOfWeekAndIsActive(
+            @Param("doctorId") Long doctorId,
+            @Param("dayOfWeek") Integer dayOfWeek,
+            @Param("isActive") Boolean isActive);
     
-    List<DoctorAvailability> findByDoctorIdAndIsActive(Long doctorId, Boolean isActive);
+    /**
+     * Buscar todos los horarios activos de un doctor
+     */
+    @Query("SELECT da FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId AND " +
+           "da.isActive = true " +
+           "ORDER BY da.dayOfWeek ASC, da.startTime ASC")
+    List<DoctorAvailability> findActiveByDoctorId(@Param("doctorId") Long doctorId);
     
-    // MÉTODO FALTANTE AGREGADO
-    List<DoctorAvailability> findByDoctorIdAndDayOfWeekAndIsActive(Long doctorId, Integer dayOfWeek, Boolean isActive);
+    /**
+     * Buscar todos los horarios de un doctor
+     */
+    @Query("SELECT da FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId " +
+           "ORDER BY da.dayOfWeek ASC, da.startTime ASC")
+    List<DoctorAvailability> findByDoctorId(@Param("doctorId") Long doctorId);
     
-    List<DoctorAvailability> findByDayOfWeek(Integer dayOfWeek);
+    /**
+     * Verificar si un doctor trabaja en un día específico
+     */
+    @Query("SELECT COUNT(da) > 0 FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId AND " +
+           "da.dayOfWeek = :dayOfWeek AND " +
+           "da.isActive = true")
+    boolean existsByDoctorIdAndDayOfWeekAndIsActive(
+            @Param("doctorId") Long doctorId,
+            @Param("dayOfWeek") Integer dayOfWeek);
     
-    List<DoctorAvailability> findByDayOfWeekAndIsActive(Integer dayOfWeek, Boolean isActive);
+    /**
+     * Buscar horarios que cubren una hora específica
+     */
+    @Query("SELECT da FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId AND " +
+           "da.dayOfWeek = :dayOfWeek AND " +
+           "da.isActive = true AND " +
+           "da.startTime <= :time AND da.endTime > :time")
+    List<DoctorAvailability> findByDoctorAndDayAndTimeRange(
+            @Param("doctorId") Long doctorId,
+            @Param("dayOfWeek") Integer dayOfWeek,
+            @Param("time") LocalTime time);
     
-    Optional<DoctorAvailability> findByDoctorIdAndDayOfWeek(Long doctorId, Integer dayOfWeek);
-    
-    @Query("SELECT da FROM DoctorAvailability da " +
-           "WHERE da.doctor.id = :doctorId AND da.dayOfWeek = :dayOfWeek AND da.isActive = true")
-    Optional<DoctorAvailability> findActivByDoctorIdAndDayOfWeek(@Param("doctorId") Long doctorId, 
-                                                                @Param("dayOfWeek") Integer dayOfWeek);
-    
-    @Query("SELECT da FROM DoctorAvailability da " +
-           "WHERE da.doctor.id = :doctorId " +
-           "AND da.dayOfWeek = :dayOfWeek " +
-           "AND da.startTime <= :time " +
-           "AND da.endTime > :time " +
-           "AND da.isActive = true")
-    Optional<DoctorAvailability> findByDoctorAndDayAndTime(@Param("doctorId") Long doctorId,
-                                                          @Param("dayOfWeek") Integer dayOfWeek,
-                                                          @Param("time") LocalTime time);
-    
-    @Query("SELECT da FROM DoctorAvailability da " +
-           "WHERE da.doctor.id IN :doctorIds AND da.dayOfWeek = :dayOfWeek AND da.isActive = true")
-    List<DoctorAvailability> findByDoctorIdsAndDayOfWeek(@Param("doctorIds") List<Long> doctorIds,
-                                                        @Param("dayOfWeek") Integer dayOfWeek);
-    
-    @Query("SELECT DISTINCT da.doctor.id FROM DoctorAvailability da " +
-           "WHERE da.dayOfWeek = :dayOfWeek " +
-           "AND da.startTime <= :time " +
-           "AND da.endTime > :time " +
-           "AND da.isActive = true")
-    List<Long> findAvailableDoctorIds(@Param("dayOfWeek") Integer dayOfWeek, @Param("time") LocalTime time);
-    
-    @Query("SELECT COUNT(da) FROM DoctorAvailability da WHERE da.doctor.id = :doctorId AND da.isActive = true")
-    long countActivByDoctorId(@Param("doctorId") Long doctorId);
-    
-    @Query("SELECT COUNT(DISTINCT da.doctor.id) FROM DoctorAvailability da " +
-           "WHERE da.dayOfWeek = :dayOfWeek AND da.isActive = true")
-    long countAvailableDoctorsByDay(@Param("dayOfWeek") Integer dayOfWeek);
-    
-    boolean existsByDoctorIdAndDayOfWeekAndIsActive(Long doctorId, Integer dayOfWeek, Boolean isActive);
-    
+    /**
+     * Eliminar horarios de un doctor específico
+     */
     void deleteByDoctorId(Long doctorId);
     
-    void deleteByDoctorIdAndDayOfWeek(Long doctorId, Integer dayOfWeek);
-    
-    @Query("SELECT COUNT(da) FROM DoctorAvailability da " +
-           "WHERE da.dayOfWeek = :dayOfWeek " +
-           "AND da.isActive = true")
+    /**
+     * Contar slots disponibles para un día de la semana (versión simplificada)
+     */
+    @Query("SELECT COUNT(da) FROM DoctorAvailability da WHERE " +
+           "da.dayOfWeek = :dayOfWeek AND " +
+           "da.isActive = true")
     Long countAvailableSlotsForDay(@Param("dayOfWeek") Integer dayOfWeek);
     
-    @Query("SELECT COUNT(da) FROM DoctorAvailability da " +
-           "WHERE da.dayOfWeek = :dayOfWeek")
+    /**
+     * Contar total de slots para un día de la semana (versión simplificada)
+     */
+    @Query("SELECT COUNT(da) * 10 FROM DoctorAvailability da WHERE " +
+           "da.dayOfWeek = :dayOfWeek AND " +
+           "da.isActive = true")
     Long countTotalSlotsForDay(@Param("dayOfWeek") Integer dayOfWeek);
+    
+    /**
+     * Buscar horarios por doctor y día
+     */
+    @Query("SELECT da FROM DoctorAvailability da WHERE " +
+           "da.doctor.id = :doctorId AND " +
+           "da.dayOfWeek = :dayOfWeek")
+    List<DoctorAvailability> findByDoctorIdAndDayOfWeek(@Param("doctorId") Long doctorId, @Param("dayOfWeek") Integer dayOfWeek);
 }
