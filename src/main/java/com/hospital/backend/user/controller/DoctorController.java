@@ -136,9 +136,8 @@ public class DoctorController {
             @RequestParam("image") MultipartFile imageFile) {
         try {
             String imageUrl = profileImageService.saveProfileImage(imageFile, id);
-            // Aquí necesitarías actualizar el doctor con la nueva imagen
-            // DoctorResponse updatedDoctor = doctorService.updateProfileImage(id, imageUrl);
-            return ResponseEntity.ok(ApiResponse.success("Imagen subida exitosamente", null));
+            DoctorResponse updatedDoctor = doctorService.updateProfileImage(id, imageUrl);
+            return ResponseEntity.ok(ApiResponse.success("Imagen subida exitosamente", updatedDoctor));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Error al subir imagen: " + e.getMessage()));

@@ -27,10 +27,10 @@ import java.time.LocalDate;
  * Controlador REST para la gestión de pagos
  */
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/payments")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Payments", description = "Gestión de pagos y facturación")
+@Tag(name = "💰 Pagos y Facturación", description = "Gestión completa de pagos: procesamiento, confirmación, reportes financieros y métodos de pago.")
 public class PaymentController {
 
     private final PaymentService paymentService;

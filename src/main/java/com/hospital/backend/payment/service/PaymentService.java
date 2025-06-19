@@ -7,7 +7,6 @@ import com.hospital.backend.catalog.repository.PaymentMethodRepository;
 import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
-import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentMethodType;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.dto.CreatePaymentRequest;

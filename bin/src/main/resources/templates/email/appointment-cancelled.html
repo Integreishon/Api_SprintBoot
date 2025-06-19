@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cita Cancelada</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f93e3e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 th:text="${appName}">Hospital API</h1>
+        <h2>Cita Cancelada</h2>
+    </div>
+    
+    <div class="content">
+        <p th:text="'Hola ' + ${userName} + ','">Hola Usuario,</p>
+        
+        <p>Te informamos que tu cita médica ha sido <strong>cancelada</strong>.</p>
+        
+        <div th:utext="${notification.message}">
+            <!-- Detalles de la cancelación -->
+        </div>
+        
+        <p>Si necesitas reagendar tu cita, por favor contacta con nosotros.</p>
+        
+        <p>
+            Saludos,<br>
+            <strong th:text="${appName}">Equipo del Hospital</strong>
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>Este es un email automático, por favor no responder directamente a este mensaje.</p>
+        <p>&copy; 2024 <span th:text="${appName}">Hospital API</span>. Todos los derechos reservados.</p>
+    </div>
+</body>
+</html>

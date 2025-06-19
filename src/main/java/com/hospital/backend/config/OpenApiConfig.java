@@ -17,7 +17,7 @@ import java.util.List;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI customOpenAPI() {
+    OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("Hospital Management System API")
@@ -52,7 +52,7 @@ public class OpenApiConfig {
 
     // ORDEN CONTROLADO: "Todas las APIs" primero con prefijo 01
     @Bean
-    public GroupedOpenApi allApisApi() {
+    GroupedOpenApi allApisApi() {
         return GroupedOpenApi.builder()
                 .group("01-all")
                 .displayName("🌐 Todas las APIs")
@@ -79,16 +79,30 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi authenticationApi() {
+    GroupedOpenApi authenticationApi() {
         return GroupedOpenApi.builder()
                 .group("02-authentication")
                 .displayName("🔐 Autenticación y Sesiones")
                 .pathsToMatch("/auth/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Sistema de Autenticación JWT")
+                            .description("""
+                                    **Autenticación Segura con JWT**
+                                    
+                                    Sistema completo de autenticación con tokens JWT:
+                                    - Login y registro de usuarios
+                                    - Validación y renovación de tokens
+                                    - Gestión de perfiles y contraseñas
+                                    
+                                    🔑 **Para obtener token:** Use POST /auth/login
+                                    """));
+                })
                 .build();
     }
 
     @Bean
-    public GroupedOpenApi usersApi() {
+    GroupedOpenApi usersApi() {
         return GroupedOpenApi.builder()
                 .group("03-users")
                 .displayName("👥 Pacientes y Doctores")
@@ -97,7 +111,7 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi appointmentsApi() {
+    GroupedOpenApi appointmentsApi() {
         return GroupedOpenApi.builder()
                 .group("04-appointments")
                 .displayName("📅 Citas Médicas")
@@ -106,16 +120,30 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi catalogsApi() {
+    GroupedOpenApi catalogsApi() {
         return GroupedOpenApi.builder()
                 .group("05-catalogs")
-                .displayName("📋 Referencias")
+                .displayName("📋 Catálogos y Referencias")
                 .pathsToMatch("/specialties/**", "/document-types/**", "/payment-methods/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Catálogos del Sistema")
+                            .description("""
+                                    **Referencias y Configuraciones**
+                                    
+                                    Catálogos básicos del sistema:
+                                    - 🏥 Especialidades médicas con precios
+                                    - 🆔 Tipos de documento de identidad
+                                    - 💳 Métodos de pago disponibles
+                                    
+                                    🌐 **Acceso público** - No requieren autenticación
+                                    """));
+                })
                 .build();
     }
 
     @Bean
-    public GroupedOpenApi medicalApi() {
+    GroupedOpenApi medicalApi() {
         return GroupedOpenApi.builder()
                 .group("06-medical")
                 .displayName("🏥 Historiales Médicos")
@@ -124,7 +152,7 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi paymentsApi() {
+    GroupedOpenApi paymentsApi() {
         return GroupedOpenApi.builder()
                 .group("07-payments")
                 .displayName("💰 Facturación y Pagos")
@@ -133,25 +161,53 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi notificationsApi() {
+    GroupedOpenApi notificationsApi() {
         return GroupedOpenApi.builder()
                 .group("08-notifications")
-                .displayName("🔔 Notificaciones")
+                .displayName("🔔 Notificaciones y Alertas")
                 .pathsToMatch("/notifications/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Sistema de Notificaciones")
+                            .description("""
+                                    **Comunicaciones del Hospital**
+                                    
+                                    Tipos de notificaciones:
+                                    - 📧 Recordatorios de citas por email
+                                    - 🔔 Alertas del sistema
+                                    - 📨 Notificaciones masivas
+                                    - 📈 Estadísticas de entrega
+                                    """));
+                })
                 .build();
     }
 
     @Bean
-    public GroupedOpenApi chatbotApi() {
+    GroupedOpenApi chatbotApi() {
         return GroupedOpenApi.builder()
                 .group("09-chatbot")
                 .displayName("🤖 Asistente Virtual")
                 .pathsToMatch("/chatbot/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Chatbot Inteligente")
+                            .description("""
+                                    **Asistente Virtual del Hospital**
+                                    
+                                    Capacidades del chatbot:
+                                    - ❓ Respuestas automáticas a consultas
+                                    - 📚 Base de conocimientos configurable
+                                    - 📊 Historial de conversaciones
+                                    - 👍 Sistema de feedback
+                                    
+                                    🌐 **Acceso público** para consultas básicas
+                                    """));
+                })
                 .build();
     }
 
     @Bean
-    public GroupedOpenApi monitoringApi() {
+    GroupedOpenApi monitoringApi() {
         return GroupedOpenApi.builder()
                 .group("10-monitoring")
                 .displayName("📊 Monitoreo y Métricas")
@@ -160,11 +216,26 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi adminApi() {
+    GroupedOpenApi adminApi() {
         return GroupedOpenApi.builder()
                 .group("11-admin")
                 .displayName("⚙️ Panel de Administración")
                 .pathsToMatch("/admin/**", "/analytics/**", "/audit/**")
+                .addOpenApiCustomizer(openApi -> {
+                    openApi.info(new Info()
+                            .title("Administración del Hospital")
+                            .description("""
+                                    **Panel de Control Administrativo**
+                                    
+                                    Herramientas de administración:
+                                    - 📈 Dashboard con métricas en tiempo real
+                                    - 📄 Auditoría de acciones del sistema
+                                    - 📊 Análisis y reportes avanzados
+                                    - ⚙️ Configuraciones del hospital
+                                    
+                                    🔒 **Solo ADMIN** - Requiere permisos de administrador
+                                    """));
+                })
                 .build();
     }
 }

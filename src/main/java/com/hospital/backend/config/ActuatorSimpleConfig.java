@@ -23,7 +23,7 @@ public class ActuatorSimpleConfig {
      * Bean para verificar que la configuración está activa
      */
     @Bean
-    public String actuatorConfigStatus() {
+    String actuatorConfigStatus() {
         return "Actuator configurado correctamente para Sistema Hospitalario";
     }
 }

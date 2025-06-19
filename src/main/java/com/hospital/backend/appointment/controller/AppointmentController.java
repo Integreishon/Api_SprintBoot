@@ -32,10 +32,10 @@ import java.util.List;
  * Controlador REST para la gestión de citas médicas
  */
 @RestController
-@RequestMapping("/api/appointments")
+@RequestMapping("/appointments")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Appointments", description = "Gestión de citas médicas")
+@Tag(name = "📅 Citas Médicas", description = "Gestión completa de citas médicas: programación, confirmación, seguimiento y reportes.")
 public class AppointmentController {
     
     private final AppointmentService appointmentService;

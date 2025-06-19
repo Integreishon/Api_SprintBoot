@@ -26,6 +26,12 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     
     boolean existsByUserEmail(String email);
     
+    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.documentType")
+    Page<Patient> findAllWithUserAndDocumentType(Pageable pageable);
+    
+    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.documentType WHERE p.id = :id")
+    Optional<Patient> findByIdWithUserAndDocumentType(@Param("id") Long id);
+    
     @Query("SELECT p FROM Patient p WHERE " +
            "LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Patient> findByNameContaining(@Param("name") String name, Pageable pageable);

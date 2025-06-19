@@ -1,0 +1,260 @@
+package com.hospital.backend.config;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.boot.actuate.info.Info;
+import org.springframework.boot.actuate.info.InfoContributor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
+import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Configuración personalizada de Spring Boot Actuator para el sistema hospitalario
+ */
+@Configuration
+public class ActuatorConfig {
+
+    /**
+     * Bean para métricas personalizadas del sistema hospitalario
+     */
+    @Bean
+    public HospitalMetrics hospitalMetrics(MeterRegistry meterRegistry) {
+        return new HospitalMetrics(meterRegistry);
+    }
+
+    /**
+     * Clase para manejar métricas específicas del hospital
+     */
+    public static class HospitalMetrics {
+        private final Counter appointmentCounter;
+        private final Counter patientRegistrationCounter;
+        private final Counter loginAttemptCounter;
+        private final Timer appointmentProcessingTimer;
+        private final Timer databaseQueryTimer;
+
+        public HospitalMetrics(MeterRegistry meterRegistry) {
+            this.appointmentCounter = Counter.builder("hospital.appointments.created")
+                    .description("Total number of appointments created")
+                    .register(meterRegistry);
+
+            this.patientRegistrationCounter = Counter.builder("hospital.patients.registered")
+                    .description("Total number of patients registered")
+                    .register(meterRegistry);
+
+            this.loginAttemptCounter = Counter.builder("hospital.auth.login.attempts")
+                    .description("Total number of login attempts")
+                    .register(meterRegistry);
+
+            this.appointmentProcessingTimer = Timer.builder("hospital.appointments.processing.time")
+                    .description("Time taken to process appointments")
+                    .register(meterRegistry);
+
+            this.databaseQueryTimer = Timer.builder("hospital.database.query.time")
+                    .description("Time taken for database queries")
+                    .register(meterRegistry);
+        }
+
+        public void incrementAppointmentCounter() {
+            appointmentCounter.increment();
+        }
+
+        public void incrementPatientRegistrationCounter() {
+            patientRegistrationCounter.increment();
+        }
+
+        public void incrementLoginAttemptCounter() {
+            loginAttemptCounter.increment();
+        }
+
+        public Timer.Sample startAppointmentProcessingTimer() {
+            return Timer.start();
+        }
+
+        public Timer.Sample startDatabaseQueryTimer() {
+            return Timer.start();
+        }
+        
+        public void recordAppointmentProcessingTime(Timer.Sample sample) {
+            sample.stop(appointmentProcessingTimer);
+        }
+        
+        public void recordDatabaseQueryTime(Timer.Sample sample) {
+            sample.stop(databaseQueryTimer);
+        }
+    }
+}
+
+/**
+ * Información personalizada del sistema hospitalario para el endpoint /actuator/info
+ */
+@Component
+class HospitalInfoContributor implements InfoContributor {
+
+    @Override
+    public void contribute(Info.Builder builder) {
+        Map<String, Object> hospitalInfo = new HashMap<>();
+        hospitalInfo.put("name", "Sistema Integral de Gestión Hospitalaria");
+        hospitalInfo.put("version", "1.0.0");
+        hospitalInfo.put("description", "API REST para gestión hospitalaria completa");
+        hospitalInfo.put("maintainer", "Hospital Development Team");
+        hospitalInfo.put("contact", "admin@hospital.com");
+        hospitalInfo.put("build-time", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        hospitalInfo.put("features", new String[]{
+                "Gestión de Pacientes",
+                "Sistema de Citas",
+                "Historiales Médicos",
+                "Prescripciones Digitales",
+                "Sistema de Pagos",
+                "Notificaciones",
+                "Chatbot Médico",
+                "Analytics y Auditorías",
+                "Panel Administrativo"
+        });
+        hospitalInfo.put("modules", new String[]{
+                "auth", "user", "catalog", "appointment", 
+                "medical", "payment", "notification", "chatbot", 
+                "analytics", "admin"
+        });
+        hospitalInfo.put("database", "PostgreSQL");
+        hospitalInfo.put("security", "JWT + Role-based Access Control");
+        
+        builder.withDetail("hospital", hospitalInfo);
+    }
+}
+
+/**
+ * Health Indicator personalizado para verificar el estado del sistema hospitalario
+ */
+@Component
+class HospitalHealthIndicator implements HealthIndicator {
+
+    @Override
+    public Health health() {
+        try {
+            // Verificar componentes críticos del sistema
+            boolean databaseHealthy = checkDatabaseHealth();
+            boolean coreServicesHealthy = checkCoreServices();
+            boolean memoryHealthy = checkMemoryUsage();
+
+            if (databaseHealthy && coreServicesHealthy && memoryHealthy) {
+                return Health.up()
+                        .withDetail("database", "Operational")
+                        .withDetail("coreServices", "All services running")
+                        .withDetail("memory", "Within acceptable limits")
+                        .withDetail("status", "Sistema Hospitalario funcionando correctamente")
+                        .withDetail("timestamp", LocalDateTime.now())
+                        .build();
+            } else {
+                return Health.down()
+                        .withDetail("database", databaseHealthy ? "OK" : "DOWN")
+                        .withDetail("coreServices", coreServicesHealthy ? "OK" : "DEGRADED")
+                        .withDetail("memory", memoryHealthy ? "OK" : "HIGH_USAGE")
+                        .withDetail("status", "Sistema con problemas detectados")
+                        .withDetail("timestamp", LocalDateTime.now())
+                        .build();
+            }
+        } catch (Exception e) {
+            return Health.down()
+                    .withDetail("error", e.getMessage())
+                    .withDetail("status", "Error en verificación de salud")
+                    .withDetail("timestamp", LocalDateTime.now())
+                    .build();
+        }
+    }
+
+    private boolean checkDatabaseHealth() {
+        // Simular verificación de base de datos
+        // En producción aquí harías una query simple como SELECT 1
+        return true;
+    }
+
+    private boolean checkCoreServices() {
+        // Verificar que los servicios principales estén disponibles
+        return true;
+    }
+
+    private boolean checkMemoryUsage() {
+        Runtime runtime = Runtime.getRuntime();
+        long maxMemory = runtime.maxMemory();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
+        
+        double memoryUsagePercentage = (double) usedMemory / maxMemory * 100;
+        
+        // Considerar saludable si el uso de memoria es menor al 85%
+        return memoryUsagePercentage < 85.0;
+    }
+}
+
+/**
+ * Endpoint personalizado para estadísticas del hospital
+ */
+@Component
+@Endpoint(id = "hospital-stats")
+class HospitalStatsEndpoint {
+
+    @ReadOperation
+    public Map<String, Object> hospitalStats() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Estadísticas del sistema (en producción estos vendrían de la base de datos)
+        stats.put("uptime", getUptime());
+        stats.put("totalEndpoints", 75);
+        stats.put("activeModules", 10);
+        stats.put("databaseConnections", getDatabaseConnectionInfo());
+        stats.put("jvmInfo", getJvmInfo());
+        stats.put("systemHealth", "HEALTHY");
+        stats.put("lastRestart", "2024-12-13T10:00:00");
+        stats.put("version", "1.0.0");
+        
+        // Métricas simuladas del hospital
+        Map<String, Object> hospitalMetrics = new HashMap<>();
+        hospitalMetrics.put("totalPatients", "Consultar BD");
+        hospitalMetrics.put("totalDoctors", "Consultar BD");
+        hospitalMetrics.put("appointmentsToday", "Consultar BD");
+        hospitalMetrics.put("activeNotifications", "Consultar BD");
+        
+        stats.put("hospitalMetrics", hospitalMetrics);
+        stats.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        
+        return stats;
+    }
+    
+    private String getUptime() {
+        long uptimeMs = System.currentTimeMillis() - 
+                        java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime();
+        long uptimeHours = uptimeMs / (1000 * 60 * 60);
+        return uptimeHours + " horas";
+    }
+    
+    private Map<String, Object> getDatabaseConnectionInfo() {
+        Map<String, Object> dbInfo = new HashMap<>();
+        dbInfo.put("driver", "PostgreSQL");
+        dbInfo.put("status", "Connected");
+        dbInfo.put("maxConnections", 20);
+        dbInfo.put("activeConnections", 3);
+        return dbInfo;
+    }
+    
+    private Map<String, Object> getJvmInfo() {
+        Runtime runtime = Runtime.getRuntime();
+        Map<String, Object> jvmInfo = new HashMap<>();
+        jvmInfo.put("javaVersion", System.getProperty("java.version"));
+        jvmInfo.put("maxMemoryMB", runtime.maxMemory() / (1024 * 1024));
+        jvmInfo.put("totalMemoryMB", runtime.totalMemory() / (1024 * 1024));
+        jvmInfo.put("freeMemoryMB", runtime.freeMemory() / (1024 * 1024));
+        jvmInfo.put("processors", runtime.availableProcessors());
+        return jvmInfo;
+    }
+}

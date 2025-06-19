@@ -212,8 +212,16 @@ public class PatientService {
         response.setBloodType(patient.getBloodType());
         response.setAddress(patient.getAddress());
         response.setPhone(patient.getPhone());
-        response.setEmail(patient.getUser().getEmail());
-        response.setUserId(patient.getUser().getId());
+        
+        // ✅ VERIFICAR SI USER NO ES NULL
+        if (patient.getUser() != null) {
+            response.setEmail(patient.getUser().getEmail());
+            response.setUserId(patient.getUser().getId());
+        } else {
+            response.setEmail(null);
+            response.setUserId(null);
+        }
+        
         response.setEmergencyContactName(patient.getEmergencyContactName());
         response.setEmergencyContactPhone(patient.getEmergencyContactPhone());
         response.setAllergies(patient.getAllergies());

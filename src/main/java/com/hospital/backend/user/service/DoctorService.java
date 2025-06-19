@@ -42,6 +42,7 @@ public class DoctorService {
     private final SpecialtyRepository specialtyRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ProfileImageService profileImageService;
     
     @Transactional(readOnly = true)
     public DoctorResponse findById(Long id) {
@@ -262,5 +263,24 @@ public class DoctorService {
         dto.setCertificationDate(doctorSpecialty.getCertificationDate());
         dto.setIsPrimary(doctorSpecialty.getIsPrimary());
         return dto;
+    }
+    
+    /**
+     * Actualiza la imagen de perfil de un doctor
+     */
+    public DoctorResponse updateProfileImage(Long doctorId, String imageUrl) {
+        Doctor doctor = getDoctorById(doctorId);
+        
+        // Eliminar imagen anterior si existe
+        if (doctor.getProfileImage() != null && !doctor.getProfileImage().isEmpty()) {
+            profileImageService.deleteProfileImage(doctor.getProfileImage());
+        }
+        
+        // Actualizar con nueva imagen
+        doctor.setProfileImage(imageUrl);
+        Doctor savedDoctor = doctorRepository.save(doctor);
+        
+        log.info("Imagen de perfil actualizada para doctor ID: {}", doctorId);
+        return mapToDoctorResponse(savedDoctor);
     }
 }

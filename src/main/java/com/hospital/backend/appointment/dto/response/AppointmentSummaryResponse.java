@@ -1,6 +1,5 @@
 package com.hospital.backend.appointment.dto.response;
 
-import com.hospital.backend.enums.AppointmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

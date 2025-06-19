@@ -5,6 +5,7 @@ import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.auth.repository.UserRepository;
 import com.hospital.backend.common.exception.UnauthorizedException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
             
             if (StringUtils.hasText(jwt)) {
+                // Validar token JWT - lanza excepción si es inválido
                 Claims claims = tokenProvider.validateToken(jwt);
                 Long userId = Long.parseLong(claims.getSubject());
                 
@@ -55,12 +57,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("Usuario autenticado: {} con rol: {}", user.getEmail(), user.getRole());
             }
+            
+            // Continuar con el filtro solo si no hay excepciones
+            filterChain.doFilter(request, response);
+            
+        } catch (UnauthorizedException ex) {
+            // Manejar tokens inválidos o usuarios no autorizados
+            log.warn("Token JWT inválido o usuario no autorizado: {}", ex.getMessage());
+            handleUnauthorized(response, ex.getMessage());
+            return; // NO continuar con el filtro
+            
+        } catch (JwtException ex) {
+            // Manejar errores específicos de JWT (malformado, expirado, etc.)
+            log.warn("Error en token JWT: {}", ex.getMessage());
+            handleUnauthorized(response, "Token JWT inválido");
+            return; // NO continuar con el filtro
+            
+        } catch (NumberFormatException ex) {
+            // Manejar error al parsear userId del token
+            log.warn("Token JWT contiene userId inválido: {}", ex.getMessage());
+            handleUnauthorized(response, "Token JWT malformado");
+            return; // NO continuar con el filtro
+            
         } catch (Exception ex) {
-            log.error("No se pudo establecer la autenticación del usuario en el contexto de seguridad", ex);
+            // Manejar cualquier otro error inesperado
+            log.error("Error inesperado en autenticación JWT: ", ex);
+            handleInternalError(response);
+            return; // NO continuar con el filtro
         }
-        
-        filterChain.doFilter(request, response);
     }
     
     private String getJwtFromRequest(HttpServletRequest request) {
@@ -71,5 +97,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         
         return null;
+    }
+    
+    /**
+     * Maneja respuestas de error 401 Unauthorized
+     */
+    private void handleUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        String jsonResponse = String.format(
+            "{\"error\":\"UNAUTHORIZED\",\"message\":\"%s\",\"timestamp\":\"%s\"}",
+            message,
+            java.time.Instant.now().toString()
+        );
+        
+        response.getWriter().write(jsonResponse);
+        response.getWriter().flush();
+    }
+    
+    /**
+     * Maneja respuestas de error 500 Internal Server Error
+     */
+    private void handleInternalError(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        String jsonResponse = String.format(
+            "{\"error\":\"INTERNAL_ERROR\",\"message\":\"Error interno de autenticación\",\"timestamp\":\"%s\"}",
+            java.time.Instant.now().toString()
+        );
+        
+        response.getWriter().write(jsonResponse);
+        response.getWriter().flush();
     }
 }

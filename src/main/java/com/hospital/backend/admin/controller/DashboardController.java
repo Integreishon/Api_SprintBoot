@@ -21,10 +21,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * Proporciona métricas y estadísticas del hospital
  */
 @RestController
-@RequestMapping("/api/admin/dashboard")
+@RequestMapping("/admin/dashboard")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Dashboard", description = "Panel administrativo con métricas y estadísticas del hospital")
+@Tag(name = "📈 Dashboard Administrativo", description = "Panel de control con métricas, estadísticas y KPIs del hospital en tiempo real.")
 public class DashboardController {
 
     private final DashboardService dashboardService;

@@ -82,14 +82,24 @@ public class AuthController {
     @Operation(summary = "🔄 Renovar Token JWT", description = "Generar nuevo token JWT")
     public ResponseEntity<ApiResponse<Map<String, Object>>> refreshToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String email = authentication.getName();
         
-        AuthResponse newAuthResponse = authService.refreshToken(email);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new com.hospital.backend.common.exception.UnauthorizedException("Token requerido para renovación");
+        }
+        
+        User user = (User) authentication.getPrincipal();
+        AuthResponse newAuthResponse = authService.refreshToken(user.getEmail());
         
         Map<String, Object> response = new HashMap<>();
         response.put("token", newAuthResponse.getToken());
+        response.put("type", "Bearer");
         response.put("expiresIn", 86400000);
         response.put("refreshedAt", LocalDateTime.now());
+        response.put("user", Map.of(
+            "id", user.getId(),
+            "email", user.getEmail(),
+            "role", user.getRole()
+        ));
         
         return ResponseEntity.ok(ApiResponse.success("Token renovado exitosamente", response));
     }
@@ -106,18 +116,47 @@ public class AuthController {
     @Operation(summary = "✅ Validar Token JWT", description = "Verificar estado del token")
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String email = authentication.getName();
-        User user = userService.findByEmail(email);
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new com.hospital.backend.common.exception.UnauthorizedException("Token no válido o expirado");
+        }
+        
+        // Obtener el usuario del contexto de seguridad
+        User user = (User) authentication.getPrincipal();
         
         Map<String, Object> validation = new HashMap<>();
         validation.put("valid", true);
         validation.put("user", Map.of(
+            "id", user.getId(),
             "email", user.getEmail(),
             "role", user.getRole(),
-            "isActive", user.getIsActive()
+            "isActive", user.getIsActive(),
+            "lastLogin", user.getLastLogin()
         ));
         validation.put("validatedAt", LocalDateTime.now());
         
         return ResponseEntity.ok(ApiResponse.success("Token validado exitosamente", validation));
+    }
+    
+    @GetMapping("/check")
+    @SecurityRequirement(name = "JWT Authentication")
+    @Operation(summary = "🔍 Verificar Autenticación", description = "Endpoint simple para verificar si el token es válido")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkAuth() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new com.hospital.backend.common.exception.UnauthorizedException("No autenticado");
+        }
+        
+        User user = (User) authentication.getPrincipal();
+        
+        Map<String, Object> authInfo = new HashMap<>();
+        authInfo.put("authenticated", true);
+        authInfo.put("userId", user.getId());
+        authInfo.put("email", user.getEmail());
+        authInfo.put("role", user.getRole());
+        authInfo.put("checkedAt", LocalDateTime.now());
+        
+        return ResponseEntity.ok(ApiResponse.success("Usuario autenticado", authInfo));
     }
 }
