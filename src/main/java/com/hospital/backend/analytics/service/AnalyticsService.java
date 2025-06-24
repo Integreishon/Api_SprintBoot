@@ -5,6 +5,4 @@ import com.hospital.backend.analytics.dto.AnalyticsResponse;
 
 public interface AnalyticsService {
     AnalyticsResponse generateAnalytics(AnalyticsRequest request);
-    int cleanupExpiredCache();
-    int invalidateCacheForEntity(String entityName);
 } 

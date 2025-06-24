@@ -1,13 +1,13 @@
 package com.hospital.backend.appointment.service;
 
-import com.hospital.backend.appointment.dto.request.AvailableSlotsRequest;
-import com.hospital.backend.appointment.dto.response.AvailableSlotResponse;
+import com.hospital.backend.appointment.dto.response.BlockAvailabilityResponse;
+import com.hospital.backend.appointment.repository.AppointmentRepository;
+import com.hospital.backend.catalog.repository.SpecialtyRepository;
+import com.hospital.backend.common.exception.ResourceNotFoundException;
+import com.hospital.backend.enums.TimeBlock;
 import com.hospital.backend.user.entity.DoctorAvailability;
 import com.hospital.backend.user.repository.DoctorAvailabilityRepository;
 import com.hospital.backend.user.repository.DoctorRepository;
-import com.hospital.backend.catalog.repository.SpecialtyRepository;
-import com.hospital.backend.appointment.repository.AppointmentRepository;
-import com.hospital.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,13 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Servicio para calcular disponibilidad de doctores y horarios libres
+ * Servicio para calcular disponibilidad de doctores por bloques de tiempo
  */
 @Service
 @RequiredArgsConstructor
@@ -34,96 +34,71 @@ public class AvailabilityService {
     private final AppointmentRepository appointmentRepository;
     
     /**
-     * Obtener slots disponibles para un doctor en una fecha específica
+     * Obtener bloques disponibles para un doctor en una fecha específica
      */
     @Transactional(readOnly = true)
-    public List<AvailableSlotResponse> getAvailableSlots(AvailableSlotsRequest request) {
-        log.info("Calculando slots disponibles para doctor: {}, fecha: {}, especialidad: {}", 
-                request.getDoctorId(), request.getDate(), request.getSpecialtyId());
+    public List<BlockAvailabilityResponse> getAvailableBlocks(Long doctorId, LocalDate date) {
+        log.info("Calculando bloques disponibles para doctor: {}, fecha: {}", doctorId, date);
         
         // Validar que el doctor existe
-        if (!doctorRepository.existsById(request.getDoctorId())) {
-            throw new ResourceNotFoundException("Doctor", "id", request.getDoctorId());
-        }
-        
-        // Validar que la especialidad existe
-        if (!specialtyRepository.existsById(request.getSpecialtyId())) {
-            throw new ResourceNotFoundException("Specialty", "id", request.getSpecialtyId());
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new ResourceNotFoundException("Doctor", "id", doctorId);
         }
         
         // Obtener la configuración de horarios del doctor para el día de la semana
-        DayOfWeek dayOfWeek = request.getDate().getDayOfWeek();
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
         int dayNumber = dayOfWeek.getValue(); // 1=Lunes, 7=Domingo
         
         List<DoctorAvailability> doctorSchedules = doctorAvailabilityRepository
-                .findByDoctorIdAndDayOfWeekAndIsActive(request.getDoctorId(), dayNumber, true);
+                .findByDoctorIdAndDayOfWeekAndIsAvailable(doctorId, dayNumber, true);
         
         if (doctorSchedules.isEmpty()) {
-            log.info("Doctor {} no trabaja los {}", request.getDoctorId(), dayOfWeek);
+            log.info("Doctor {} no trabaja los {}", doctorId, dayOfWeek);
             return new ArrayList<>();
         }
         
-        // Usar duración fija de 30 minutos
-        Integer appointmentDuration = 30;
+        List<BlockAvailabilityResponse> availableBlocks = new ArrayList<>();
         
-        List<AvailableSlotResponse> availableSlots = new ArrayList<>();
-        
-        // Para cada horario de trabajo del doctor
+        // Para cada bloque de trabajo del doctor
         for (DoctorAvailability schedule : doctorSchedules) {
-            List<AvailableSlotResponse> slotsForSchedule = generateSlotsForSchedule(
-                    request.getDoctorId(),
-                    request.getDate(),
-                    schedule,
-                    appointmentDuration
-            );
-            availableSlots.addAll(slotsForSchedule);
+            TimeBlock timeBlock = schedule.getTimeBlock();
+            int maxPatients = schedule.getMaxPatients();
+            
+            // Contar cuántas citas ya hay en este bloque
+            long appointmentsCount = appointmentRepository.countByDoctorIdAndAppointmentDateAndTimeBlock(
+                    doctorId, date, timeBlock);
+            
+            boolean hasCapacity = appointmentsCount < maxPatients;
+            
+            availableBlocks.add(BlockAvailabilityResponse.builder()
+                    .timeBlock(timeBlock)
+                    .isAvailable(hasCapacity)
+                    .maxPatients(maxPatients)
+                    .currentPatients((int) appointmentsCount)
+                    .remainingSlots(maxPatients - (int) appointmentsCount)
+                    .build());
         }
         
-        // Ordenar por hora
-        return availableSlots.stream()
-                .sorted((slot1, slot2) -> slot1.getStartTime().compareTo(slot2.getStartTime()))
-                .collect(Collectors.toList());
+        return availableBlocks;
     }
     
     /**
-     * Verificar si un doctor está disponible en una fecha y hora específica
+     * Verificar si un doctor está disponible en un bloque específico
      */
     @Transactional(readOnly = true)
-    public boolean isDoctorAvailable(Long doctorId, LocalDate date, LocalTime startTime, Integer duration) {
-        log.debug("Verificando disponibilidad de doctor: {} en fecha: {} hora: {}", 
-                doctorId, date, startTime);
+    public boolean isDoctorAvailableInTimeBlock(Long doctorId, LocalDate date, TimeBlock timeBlock) {
+        log.debug("Verificando disponibilidad de doctor: {} en fecha: {} bloque: {}", 
+                doctorId, date, timeBlock);
         
-        // 1. Verificar que el doctor trabaja ese día
+        // 1. Verificar que el doctor trabaja ese día en ese bloque
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         int dayNumber = dayOfWeek.getValue();
         
         List<DoctorAvailability> schedules = doctorAvailabilityRepository
-                .findByDoctorIdAndDayOfWeekAndIsActive(doctorId, dayNumber, true);
+                .findByDoctorIdAndDayOfWeekAndTimeBlockAndIsAvailable(doctorId, dayNumber, timeBlock, true);
         
         if (schedules.isEmpty()) {
-            log.debug("Doctor {} no trabaja los {}", doctorId, dayOfWeek);
-            return false;
-        }
-        
-        // 2. Verificar que la hora está dentro de algún horario de trabajo
-        LocalTime endTime = startTime.plusMinutes(duration);
-        boolean withinWorkingHours = schedules.stream()
-                .anyMatch(schedule -> 
-                    !startTime.isBefore(schedule.getStartTime()) && 
-                    !endTime.isAfter(schedule.getEndTime())
-                );
-        
-        if (!withinWorkingHours) {
-            log.debug("Hora {} - {} no está dentro del horario de trabajo", startTime, endTime);
-            return false;
-        }
-        
-        // 3. Verificar que no hay citas conflictivas
-        boolean hasConflicts = appointmentRepository.existsByDoctorAndDateAndTime(
-                doctorId, date, startTime);
-        
-        if (hasConflicts) {
-            log.debug("Doctor {} ya tiene una cita en {} a las {}", doctorId, date, startTime);
+            log.debug("Doctor {} no trabaja los {} en bloque {}", doctorId, dayOfWeek, timeBlock);
             return false;
         }
         
@@ -131,40 +106,64 @@ public class AvailabilityService {
     }
     
     /**
-     * Generar slots disponibles para un horario específico del doctor
+     * Verificar si un bloque tiene capacidad disponible
      */
-    private List<AvailableSlotResponse> generateSlotsForSchedule(
-            Long doctorId, 
-            LocalDate date, 
-            DoctorAvailability schedule, 
-            Integer appointmentDuration) {
+    @Transactional(readOnly = true)
+    public boolean hasBlockCapacity(Long doctorId, LocalDate date, TimeBlock timeBlock) {
+        // Obtener la configuración del bloque
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        int dayNumber = dayOfWeek.getValue();
         
-        List<AvailableSlotResponse> slots = new ArrayList<>();
+        DoctorAvailability availability = doctorAvailabilityRepository
+                .findByDoctorIdAndDayOfWeekAndTimeBlockAndIsAvailable(doctorId, dayNumber, timeBlock, true)
+                .stream()
+                .findFirst()
+                .orElse(null);
         
-        LocalTime currentTime = schedule.getStartTime();
-        LocalTime endTime = schedule.getEndTime();
-        Integer slotDuration = schedule.getSlotDuration(); // Duración de cada slot (ej: 30 min)
-        
-        // Generar slots cada 'slotDuration' minutos
-        while (!currentTime.plusMinutes(appointmentDuration).isAfter(endTime)) {
-            
-            // Verificar si este slot está disponible (no hay cita)
-            boolean isAvailable = !appointmentRepository.existsByDoctorAndDateAndTime(
-                    doctorId, date, currentTime);
-            
-            if (isAvailable) {
-                LocalTime slotEndTime = currentTime.plusMinutes(appointmentDuration);
-                slots.add(new AvailableSlotResponse(
-                        currentTime,
-                        slotEndTime,
-                        appointmentDuration,
-                        true));
-            }
-            
-            currentTime = currentTime.plusMinutes(slotDuration);
+        if (availability == null) {
+            return false;
         }
         
-        return slots;
+        int maxPatients = availability.getMaxPatients();
+        
+        // Contar cuántas citas ya hay en este bloque
+        long appointmentsCount = appointmentRepository.countByDoctorIdAndAppointmentDateAndTimeBlock(
+                doctorId, date, timeBlock);
+        
+        return appointmentsCount < maxPatients;
+    }
+    
+    /**
+     * Obtener resumen de disponibilidad por especialidad
+     */
+    @Transactional(readOnly = true)
+    public Map<TimeBlock, List<BlockAvailabilityResponse>> getAvailabilityBySpecialty(
+            Long specialtyId, LocalDate date) {
+        
+        // Validar que la especialidad existe
+        if (!specialtyRepository.existsById(specialtyId)) {
+            throw new ResourceNotFoundException("Specialty", "id", specialtyId);
+        }
+        
+        // Obtener todos los doctores de esa especialidad
+        List<Long> doctorIds = doctorRepository.findIdsBySpecialtyId(specialtyId);
+        
+        List<BlockAvailabilityResponse> allBlocks = new ArrayList<>();
+        
+        // Para cada doctor, obtener sus bloques disponibles
+        for (Long doctorId : doctorIds) {
+            List<BlockAvailabilityResponse> doctorBlocks = getAvailableBlocks(doctorId, date);
+            
+            // Agregar el ID del doctor a cada bloque
+            doctorBlocks.forEach(block -> block.setDoctorId(doctorId));
+            
+            allBlocks.addAll(doctorBlocks);
+        }
+        
+        // Agrupar por bloque de tiempo
+        return allBlocks.stream()
+                .filter(BlockAvailabilityResponse::getIsAvailable)
+                .collect(Collectors.groupingBy(BlockAvailabilityResponse::getTimeBlock));
     }
 }
 

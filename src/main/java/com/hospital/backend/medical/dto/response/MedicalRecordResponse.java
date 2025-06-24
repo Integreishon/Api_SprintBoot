@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * DTO para la respuesta de un registro médico
+ * Adaptado a la nueva lógica de Urovital (sin prescripciones)
  */
 @Data
 @NoArgsConstructor
@@ -62,8 +63,7 @@ public class MedicalRecordResponse {
     // Información adicional
     private String allergies;
     
-    // Recetas y archivos adjuntos
-    private List<PrescriptionResponse> prescriptions;
+    // Archivos adjuntos (incluye recetas escaneadas)
     private List<MedicalAttachmentResponse> attachments;
     
     // Metadatos

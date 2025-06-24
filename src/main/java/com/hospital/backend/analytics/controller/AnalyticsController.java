@@ -99,24 +99,4 @@ public class AnalyticsController {
                 .contentLength(reportBytes.length)
                 .body(reportBytes);
     }
-    
-    /**
-     * Limpia el caché de métricas expirado
-     */
-    @PostMapping("/cache/cleanup")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Integer>> cleanupCache() {
-        int cleanedEntries = analyticsService.cleanupExpiredCache();
-        return ResponseEntity.ok(ApiResponse.success("Caché limpiado exitosamente", cleanedEntries));
-    }
-    
-    /**
-     * Invalida el caché para una entidad específica
-     */
-    @PostMapping("/cache/invalidate/{entityName}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Integer>> invalidateCache(@PathVariable String entityName) {
-        int invalidatedEntries = analyticsService.invalidateCacheForEntity(entityName);
-        return ResponseEntity.ok(ApiResponse.success("Caché invalidado para: " + entityName, invalidatedEntries));
-    }
 } 

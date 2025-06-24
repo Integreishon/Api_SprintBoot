@@ -1,6 +1,7 @@
 // Repository para gestión de doctores
 package com.hospital.backend.user.repository;
 
+import com.hospital.backend.enums.DoctorType;
 import com.hospital.backend.user.entity.Doctor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository para gestión de doctores
+ * Adaptado a la nueva lógica de Urovital
+ */
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     
@@ -40,6 +45,11 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
            "WHERE ds.specialty.id = :specialtyId AND d.isActive = true")
     List<Doctor> findBySpecialtyId(@Param("specialtyId") Long specialtyId);
     
+    @Query("SELECT DISTINCT d.id FROM Doctor d " +
+           "JOIN d.specialties ds " +
+           "WHERE ds.specialty.id = :specialtyId AND d.isActive = true")
+    List<Long> findIdsBySpecialtyId(@Param("specialtyId") Long specialtyId);
+    
     @Query("SELECT DISTINCT d FROM Doctor d " +
            "JOIN d.specialties ds " +
            "WHERE ds.specialty.id = :specialtyId AND d.isActive = true")
@@ -53,15 +63,17 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     @Query("SELECT d FROM Doctor d " +
            "WHERE (:name IS NULL OR LOWER(CONCAT(d.firstName, ' ', d.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))) " +
            "AND (:specialtyId IS NULL OR d.id IN (SELECT ds.doctor.id FROM DoctorSpecialty ds WHERE ds.specialty.id = :specialtyId)) " +
+           "AND (:doctorType IS NULL OR d.doctorType = :doctorType) " +
            "AND (:isActive IS NULL OR d.isActive = :isActive)")
     Page<Doctor> findByFilters(@Param("name") String name,
                              @Param("specialtyId") Long specialtyId,
+                             @Param("doctorType") DoctorType doctorType,
                              @Param("isActive") Boolean isActive,
                              Pageable pageable);
     
     @Query("SELECT d FROM Doctor d " +
            "JOIN d.availability da " +
-           "WHERE da.dayOfWeek = :dayOfWeek AND da.isActive = true AND d.isActive = true")
+           "WHERE da.dayOfWeek = :dayOfWeek AND da.isAvailable = true AND d.isActive = true")
     List<Doctor> findAvailableByDayOfWeek(@Param("dayOfWeek") Integer dayOfWeek);
     
     @Query("SELECT COUNT(d) FROM Doctor d WHERE d.isActive = true")
@@ -72,4 +84,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     
     @Query("SELECT d FROM Doctor d WHERE d.hireDate BETWEEN :startDate AND :endDate")
     List<Doctor> findByHireDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    
+    @Query("SELECT d FROM Doctor d WHERE d.doctorType = :doctorType AND d.isActive = true")
+    List<Doctor> findByDoctorType(@Param("doctorType") DoctorType doctorType);
 }

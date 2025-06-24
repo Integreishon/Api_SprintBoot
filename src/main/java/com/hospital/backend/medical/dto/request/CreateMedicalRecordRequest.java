@@ -9,10 +9,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * DTO para la solicitud de creación de un nuevo registro médico
+ * Adaptado a la nueva lógica de Urovital (sin prescripciones)
  */
 @Data
 @NoArgsConstructor
@@ -68,6 +68,4 @@ public class CreateMedicalRecordRequest {
 
     @Size(max = 1000, message = "Las alergias no deben exceder los 1000 caracteres")
     private String allergies;
-
-    private List<CreatePrescriptionRequest> prescriptions;
 } 

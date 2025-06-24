@@ -1,6 +1,7 @@
 package com.hospital.backend.notification.service;
 
-import com.hospital.backend.notification.entity.Notification;
+import com.hospital.backend.enums.NotificationType;
+import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.user.entity.Patient;
 import com.hospital.backend.user.entity.Doctor;
 import com.hospital.backend.user.repository.PatientRepository;
@@ -19,9 +20,11 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * Servicio para el envío de emails
+ * Adaptado para la nueva lógica sin entidad Notification
  */
 @Service
 @ConditionalOnProperty(name = "spring.mail.host", matchIfMissing = false)
@@ -41,35 +44,29 @@ public class EmailService implements EmailServiceInterface {
     private String appName;
     
     /**
-     * Enviar notificación por email
+     * Enviar email directamente con tipo de notificación
      */
     @Async
-    public void sendEmailNotification(Notification notification) {
+    public void sendEmail(User user, String subject, NotificationType type, Map<String, Object> data) {
         try {
-            String toEmail = notification.getUser().getEmail();
-            String subject = notification.getTitle();
+            String toEmail = user.getEmail();
             
             // Obtener el nombre del usuario según su rol
-            String userName = getUserName(notification.getUser());
+            String userName = getUserName(user);
             
             // Crear contexto para la plantilla
             Context context = new Context();
-            context.setVariable("notification", notification);
             context.setVariable("userName", userName);
             context.setVariable("appName", appName);
+            context.setVariable("subject", subject);
             
-            // Agregar datos adicionales JSON si existe
-            if (notification.getData() != null && !notification.getData().isEmpty()) {
-                try {
-                    // Aquí podríamos parsear el JSON a un Map, pero por simplicidad lo dejamos como string
-                    context.setVariable("additionalData", notification.getData());
-                } catch (Exception e) {
-                    log.warn("Error al parsear datos adicionales JSON: {}", e.getMessage());
-                }
+            // Agregar datos adicionales si existen
+            if (data != null && !data.isEmpty()) {
+                data.forEach(context::setVariable);
             }
             
             // Seleccionar plantilla basada en el tipo de notificación
-            String template = getTemplateByNotificationType(notification);
+            String template = getTemplateByNotificationType(type);
             
             // Procesar plantilla
             String htmlContent = templateEngine.process(template, context);
@@ -80,7 +77,7 @@ public class EmailService implements EmailServiceInterface {
             log.info("Email enviado a {} con asunto: {}", toEmail, subject);
             
         } catch (Exception e) {
-            log.error("Error al enviar email de notificación: {}", e.getMessage());
+            log.error("Error al enviar email: {}", e.getMessage());
             throw new RuntimeException("Error al enviar email: " + e.getMessage());
         }
     }
@@ -88,7 +85,7 @@ public class EmailService implements EmailServiceInterface {
     /**
      * Obtener el nombre del usuario según su rol
      */
-    private String getUserName(com.hospital.backend.auth.entity.User user) {
+    private String getUserName(User user) {
         // Intentar obtener el nombre del paciente
         Patient patient = patientRepository.findByUserId(user.getId()).orElse(null);
         if (patient != null) {
@@ -122,30 +119,29 @@ public class EmailService implements EmailServiceInterface {
     
     /**
      * Obtener nombre de plantilla según el tipo de notificación
+     * Adaptado a la nueva lógica de Urovital (sin prescripciones)
      */
-    private String getTemplateByNotificationType(Notification notification) {
-        switch (notification.getType()) {
+    private String getTemplateByNotificationType(NotificationType type) {
+        switch (type) {
             case APPOINTMENT_REMINDER:
-                return "appointment-reminder";
+                return "email/appointment-reminder";
             case APPOINTMENT_CONFIRMATION:
-                return "appointment-confirmation";
+                return "email/appointment-confirmation";
             case APPOINTMENT_CANCELLED:
-                return "appointment-cancelled";
+                return "email/appointment-cancelled";
             case APPOINTMENT_RESCHEDULED:
-                return "appointment-rescheduled";
+                return "email/appointment-rescheduled";
             case PASSWORD_RESET:
-                return "password-reset";
-            case PRESCRIPTION_CREATED:
-                return "prescription-created";
+                return "email/password-reset";
             case LAB_RESULTS_AVAILABLE:
-                return "lab-results-available";
+                return "email/lab-results-available";
             case PAYMENT_RECEIVED:
-                return "payment-received";
+                return "email/payment-received";
             case PAYMENT_DUE:
-                return "payment-due";
+                return "email/payment-due";
             default:
                 // Plantilla genérica para cualquier otro tipo
-                return "general-notification";
+                return "email/general-notification";
         }
     }
     
@@ -162,7 +158,7 @@ public class EmailService implements EmailServiceInterface {
             context.setVariable("activationLink", activationLink);
             context.setVariable("appName", appName);
             
-            String htmlContent = templateEngine.process("welcome-email", context);
+            String htmlContent = templateEngine.process("email/welcome-email", context);
             
             sendHtmlEmail(to, subject, htmlContent);
             
@@ -186,7 +182,7 @@ public class EmailService implements EmailServiceInterface {
             context.setVariable("resetLink", resetLink);
             context.setVariable("appName", appName);
             
-            String htmlContent = templateEngine.process("password-reset", context);
+            String htmlContent = templateEngine.process("email/password-reset", context);
             
             sendHtmlEmail(to, subject, htmlContent);
             

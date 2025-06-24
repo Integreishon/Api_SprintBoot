@@ -16,18 +16,18 @@ VALUES
 -- ============================================================================
 -- ESPECIALIDADES MÉDICAS (specialties)
 -- ============================================================================
-INSERT INTO specialties (name, description, consultation_price, discount_percentage, average_duration, is_active, created_at, updated_at)
+INSERT INTO specialties (name, description, consultation_price, discount_percentage, is_active, created_at, updated_at)
 VALUES 
-    ('Medicina General', 'Atención médica integral y preventiva para adultos', 80.00, 0.00, 30, true, NOW(), NOW()),
-    ('Cardiología', 'Especialidad del corazón y sistema cardiovascular', 120.00, 0.00, 45, true, NOW(), NOW()),
-    ('Dermatología', 'Tratamiento de enfermedades de la piel', 100.00, 0.00, 30, true, NOW(), NOW()),
-    ('Pediatría', 'Atención médica especializada para niños y adolescentes', 90.00, 0.00, 30, true, NOW(), NOW()),
-    ('Ginecología', 'Salud reproductiva femenina', 110.00, 0.00, 45, true, NOW(), NOW()),
-    ('Traumatología', 'Tratamiento de lesiones del sistema músculo-esquelético', 130.00, 0.00, 45, true, NOW(), NOW()),
-    ('Oftalmología', 'Cuidado de los ojos y la visión', 100.00, 0.00, 30, true, NOW(), NOW()),
-    ('Neurología', 'Tratamiento del sistema nervioso', 140.00, 0.00, 60, true, NOW(), NOW()),
-    ('Psiquiatría', 'Salud mental y trastornos psiquiátricos', 120.00, 0.00, 60, true, NOW(), NOW()),
-    ('Endocrinología', 'Tratamiento de trastornos hormonales', 110.00, 0.00, 45, true, NOW(), NOW());
+    ('Medicina General', 'Atención médica integral y preventiva para adultos', 80.00, 0.00, true, NOW(), NOW()),
+    ('Cardiología', 'Especialidad del corazón y sistema cardiovascular', 120.00, 0.00, true, NOW(), NOW()),
+    ('Dermatología', 'Tratamiento de enfermedades de la piel', 100.00, 0.00, true, NOW(), NOW()),
+    ('Pediatría', 'Atención médica especializada para niños y adolescentes', 90.00, 0.00, true, NOW(), NOW()),
+    ('Ginecología', 'Salud reproductiva femenina', 110.00, 0.00, true, NOW(), NOW()),
+    ('Traumatología', 'Tratamiento de lesiones del sistema músculo-esquelético', 130.00, 0.00, true, NOW(), NOW()),
+    ('Oftalmología', 'Cuidado de los ojos y la visión', 100.00, 0.00, true, NOW(), NOW()),
+    ('Neurología', 'Tratamiento del sistema nervioso', 140.00, 0.00, true, NOW(), NOW()),
+    ('Psiquiatría', 'Salud mental y trastornos psiquiátricos', 120.00, 0.00, true, NOW(), NOW()),
+    ('Endocrinología', 'Tratamiento de trastornos hormonales', 110.00, 0.00, true, NOW(), NOW());
 
 -- ============================================================================
 -- MÉTODOS DE PAGO (payment_methods) - ESTRUCTURA SIMPLIFICADA

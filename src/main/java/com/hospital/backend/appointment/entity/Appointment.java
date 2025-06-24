@@ -3,6 +3,8 @@ package com.hospital.backend.appointment.entity;
 import com.hospital.backend.catalog.entity.Specialty;
 import com.hospital.backend.common.entity.BaseEntity;
 import com.hospital.backend.enums.AppointmentStatus;
+import com.hospital.backend.enums.PaymentStatus;
+import com.hospital.backend.enums.TimeBlock;
 import com.hospital.backend.user.entity.Doctor;
 import com.hospital.backend.user.entity.Patient;
 import jakarta.persistence.*;
@@ -11,12 +13,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 /**
- * Entidad que representa una cita médica presencial en el sistema
+ * Entidad que representa una cita médica en el sistema
+ * IMPORTANTE: Todas las citas requieren pago confirmado para ser creadas
  */
 @Entity
 @Table(name = "appointments")
@@ -30,37 +31,31 @@ public class Appointment extends BaseEntity {
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
     
-    // Primero se elige la especialidad...
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "specialty_id", nullable = false)
-    private Specialty specialty;
-    
-    // ...y luego los doctores de esa especialidad
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "specialty_id", nullable = false)
+    private Specialty specialty;
+    
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
     
-    @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "time_block", nullable = false)
+    private TimeBlock timeBlock; // MORNING, AFTERNOON
     
     @Column(name = "reason", nullable = false, columnDefinition = "TEXT")
     private String reason;
     
-    @Column(name = "price", precision = 10, scale = 2)
-    private BigDecimal price;
-    
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private AppointmentStatus status;
+    private AppointmentStatus status = AppointmentStatus.SCHEDULED;
     
-    @Column(name = "follow_up_appointment_id")
-    private Long followUpAppointmentId;
-    
-    @Column(name = "cancellation_reason")
-    private String cancellationReason;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.COMPLETED; // Siempre pagada
     
     // =========================
     // Métodos de negocio
@@ -68,43 +63,35 @@ public class Appointment extends BaseEntity {
     
     /**
      * ¿Se puede cancelar?
-     * Solo si está programada o confirmada.
+     * Solo si está programada o en consulta.
      */
     public boolean canCancel() {
         return this.status == AppointmentStatus.SCHEDULED || 
-               this.status == AppointmentStatus.CONFIRMED;
+               this.status == AppointmentStatus.IN_CONSULTATION;
     }
     
     /**
      * ¿Se puede marcar como completada?
-     * Solo si ya fue confirmada.
+     * Solo si está en consulta.
      */
     public boolean canComplete() {
-        return this.status == AppointmentStatus.CONFIRMED;
-    }
-    
-    /**
-     * ¿Se puede reagendar?
-     * Solo si está programada o confirmada.
-     */
-    public boolean canReschedule() {
-        return this.status == AppointmentStatus.SCHEDULED || 
-               this.status == AppointmentStatus.CONFIRMED;
+        return this.status == AppointmentStatus.IN_CONSULTATION;
     }
     
     /**
      * ¿La cita está pendiente?
-     * Programada o confirmada.
+     * Programada o en consulta.
      */
     public boolean isPending() {
         return this.status == AppointmentStatus.SCHEDULED || 
-               this.status == AppointmentStatus.CONFIRMED;
+               this.status == AppointmentStatus.IN_CONSULTATION;
     }
     
     /**
-     * Calcular hora de fin de la cita
+     * Obtener el precio de la consulta
+     * Se calcula automáticamente desde specialty.consultation_price
      */
-    public LocalTime getEndTime() {
-        return this.startTime.plusMinutes(30); // Duración fija de 30 minutos
+    public java.math.BigDecimal getPrice() {
+        return this.specialty != null ? this.specialty.getFinalPrice() : null;
     }
 }

@@ -2,7 +2,6 @@
 package com.hospital.backend.user.entity;
 
 import com.hospital.backend.auth.entity.User;
-import com.hospital.backend.catalog.entity.DocumentType;
 import com.hospital.backend.common.entity.BaseEntity;
 import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
@@ -12,6 +11,10 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
+/**
+ * Entidad Paciente para gestión de datos médicos
+ * Simplificado: Solo DNI como documento
+ */
 @Data
 @Entity
 @Table(name = "patients")
@@ -22,12 +25,8 @@ public class Patient extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_type_id", nullable = false)
-    private DocumentType documentType;
-    
-    @Column(name = "document_number", nullable = false)
-    private String documentNumber;
+    @Column(name = "document_number", nullable = false, unique = true, length = 12)
+    private String documentNumber; // Solo DNI (8 dígitos)
     
     @Column(name = "first_name", nullable = false)
     private String firstName;
@@ -64,9 +63,9 @@ public class Patient extends BaseEntity {
     @Column(name = "allergies", columnDefinition = "TEXT")
     private String allergies;
     
-    @Column(name = "chronic_conditions", columnDefinition = "TEXT")
-    private String chronicConditions;
+    @Column(name = "medical_history", columnDefinition = "TEXT")
+    private String medicalHistory;
     
-    @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"document_type_id", "document_number"}))
-    public static class PatientConstraints {}
+    @Column(name = "reniec_verified", nullable = false)
+    private Boolean reniecVerified = false;
 }

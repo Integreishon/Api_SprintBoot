@@ -19,6 +19,7 @@ import java.util.List;
 
 /**
  * Entidad que representa un registro médico en el historial de un paciente
+ * Incluye soporte para derivaciones internas
  */
 @Entity
 @Table(name = "medical_records")
@@ -96,8 +97,11 @@ public class MedicalRecord extends AuditEntity {
     @Column(name = "allergies", columnDefinition = "TEXT")
     private String allergies;
     
-    @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Prescription> prescriptions = new ArrayList<>();
+    @Column(name = "is_referral_record")
+    private Boolean isReferralRecord = false;
+    
+    @Column(name = "referral_notes", columnDefinition = "TEXT")
+    private String referralNotes;
     
     @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MedicalAttachment> attachments = new ArrayList<>();

@@ -1,18 +1,21 @@
-// Enumeración de tipos de archivo médico
+// Enumeración de tipos de archivos
 package com.hospital.backend.enums;
 
 /**
- * Tipos de archivos en el sistema
+ * Tipos de archivos que pueden ser subidos al sistema
  */
 public enum FileType {
-    PDF("Archivo PDF"),
+    PDF("Documento PDF"),
     IMAGE("Imagen"),
     DOCUMENT("Documento"),
+    PRESCRIPTION("Receta médica"), // Recetas médicas subidas por pacientes
     LAB_RESULT("Resultado de laboratorio"),
-    X_RAY("Radiografía"),
+    XRAY("Radiografía"),
     ULTRASOUND("Ecografía"),
     MRI("Resonancia magnética"),
     CT_SCAN("Tomografía computarizada"),
+    AUDIO("Audio"),
+    VIDEO("Video"),
     OTHER("Otro");
     
     private final String displayName;

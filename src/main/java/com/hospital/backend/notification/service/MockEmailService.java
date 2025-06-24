@@ -1,10 +1,13 @@
 package com.hospital.backend.notification.service;
 
-import com.hospital.backend.notification.entity.Notification;
+import com.hospital.backend.auth.entity.User;
+import com.hospital.backend.enums.NotificationType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 /**
  * Servicio MOCK para emails cuando el email está deshabilitado
@@ -16,11 +19,10 @@ public class MockEmailService implements EmailServiceInterface {
     
     @Override
     @Async
-    public void sendEmailNotification(Notification notification) {
-        log.info("📧 MOCK EMAIL: Enviando notificación a {} - Asunto: {}", 
-                 notification.getUser().getEmail(), 
-                 notification.getTitle());
-        log.debug("📧 MOCK EMAIL: Contenido: {}", notification.getMessage());
+    public void sendEmail(User user, String subject, NotificationType type, Map<String, Object> data) {
+        log.info("📧 MOCK EMAIL: Enviando email tipo {} a {} - Asunto: {}", 
+                 type, user.getEmail(), subject);
+        log.debug("📧 MOCK EMAIL: Datos: {}", data);
         // No hace nada real - solo logging
     }
     

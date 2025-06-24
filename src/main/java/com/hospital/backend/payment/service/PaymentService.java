@@ -9,9 +9,9 @@ import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.PaymentMethodType;
 import com.hospital.backend.enums.PaymentStatus;
-import com.hospital.backend.payment.dto.CreatePaymentRequest;
-import com.hospital.backend.payment.dto.PaymentResponse;
-import com.hospital.backend.payment.dto.PaymentSummaryResponse;
+import com.hospital.backend.payment.dto.request.CreatePaymentRequest;
+import com.hospital.backend.payment.dto.response.PaymentResponse;
+import com.hospital.backend.payment.dto.response.PaymentSummaryResponse;
 import com.hospital.backend.payment.entity.Payment;
 import com.hospital.backend.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +31,13 @@ import java.util.List;
 
 /**
  * Servicio para la gestión de pagos
+ * Adaptado a la nueva lógica de Urovital
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentService {
-
+    
     private final PaymentRepository paymentRepository;
     private final AppointmentRepository appointmentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -44,69 +45,48 @@ public class PaymentService {
     private static final DateTimeFormatter RECEIPT_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     
     /**
-     * Crea un nuevo pago para una cita
+     * Crear un nuevo pago
      */
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request) {
         log.info("Creando nuevo pago para cita: {}", request.getAppointmentId());
         
-        // Buscar la cita
+        // 1. Validar que la cita existe
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", request.getAppointmentId()));
         
-        // Verificar que la cita no tenga ya un pago
-        paymentRepository.findByAppointmentId(appointment.getId())
-                .ifPresent(p -> {
-                    throw new BusinessException("La cita ya tiene un pago registrado");
-                });
-        
-        // Buscar el método de pago
+        // 2. Validar que el método de pago existe
         PaymentMethod paymentMethod = paymentMethodRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new ResourceNotFoundException("PaymentMethod", "id", request.getPaymentMethodId()));
         
-        // Verificar que el método de pago esté activo
-        if (!paymentMethod.getIsActive()) {
-            throw new BusinessException("El método de pago seleccionado no está disponible");
+        // 3. Validar que no existe un pago para esta cita
+        if (paymentRepository.existsByAppointmentId(request.getAppointmentId())) {
+            throw new BusinessException("Ya existe un pago para esta cita");
         }
         
-        // Calcular monto y comisión
-        BigDecimal amount = request.getAmount() != null ? request.getAmount() : appointment.getPrice();
-        BigDecimal processingFee = calculateProcessingFee(amount, paymentMethod);
-        BigDecimal totalAmount = amount.add(processingFee);
-        
-        // Crear el pago
+        // 4. Crear el pago
         Payment payment = new Payment();
         payment.setAppointment(appointment);
         payment.setPaymentMethod(paymentMethod);
-        payment.setAmount(amount);
-        payment.setProcessingFee(processingFee);
-        payment.setTotalAmount(totalAmount);
-        payment.setStatus(PaymentStatus.PENDING);
+        payment.setAmount(request.getAmount());
+        payment.setProcessingFee(calculateProcessingFee(request.getAmount(), paymentMethod));
+        payment.setTotalAmount(request.getAmount().add(payment.getProcessingFee()));
+        payment.setTransactionReference(request.getTransactionReference());
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setStatus(PaymentStatus.PROCESSING);
+        payment.setReceiptNumber(generateReceiptNumber());
         payment.setPayerName(request.getPayerName());
         payment.setPayerEmail(request.getPayerEmail());
-        payment.setTransactionReference(request.getTransactionReference());
+        payment.setRequiresValidation(paymentMethod.getRequiresManualValidation());
         
-        // Calcular el total incluyendo fees
-        payment.calculateTotalAmount();
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("Pago creado exitosamente con ID: {}", savedPayment.getId());
         
-        // Si viene con referencia de transacción, marcar como pagado automáticamente
-        if (request.getTransactionReference() != null && !request.getTransactionReference().isEmpty()) {
-            payment.markAsPaid(request.getTransactionReference());
-            log.info("Pago marcado como completado automáticamente con referencia: {}", request.getTransactionReference());
-        }
-        
-        // Generar número de recibo
-        payment.setReceiptNumber(generateReceiptNumber());
-        
-        // Guardar el pago
-        payment = paymentRepository.save(payment);
-        
-        log.info("Pago creado exitosamente con ID: {}", payment.getId());
-        return mapToPaymentResponse(payment);
+        return mapToPaymentResponse(savedPayment);
     }
     
     /**
-     * Confirma un pago pendiente
+     * Confirmar un pago
      */
     @Transactional
     public PaymentResponse confirmPayment(Long id, String transactionReference) {
@@ -115,20 +95,22 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            throw new BusinessException("Solo se pueden confirmar pagos pendientes");
+        if (payment.getStatus() != PaymentStatus.PROCESSING) {
+            throw new BusinessException("Solo se pueden confirmar pagos en estado PROCESSING");
         }
         
-        // Marcar pago como pagado
-        payment.markAsPaid(transactionReference);
-        payment = paymentRepository.save(payment);
+        // Actualizar pago
+        payment.setStatus(PaymentStatus.COMPLETED);
+        payment.setTransactionReference(transactionReference);
         
+        Payment savedPayment = paymentRepository.save(payment);
         log.info("Pago confirmado exitosamente");
-        return mapToPaymentResponse(payment);
+        
+        return mapToPaymentResponse(savedPayment);
     }
     
     /**
-     * Marca un pago como fallido
+     * Marcar un pago como fallido
      */
     @Transactional
     public PaymentResponse markPaymentAsFailed(Long id) {
@@ -137,40 +119,44 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            throw new BusinessException("Solo se pueden marcar como fallidos los pagos pendientes");
+        if (payment.getStatus() != PaymentStatus.PROCESSING) {
+            throw new BusinessException("Solo se pueden marcar como fallidos pagos en estado PROCESSING");
         }
         
-        payment.markAsFailed();
-        payment = paymentRepository.save(payment);
+        // Actualizar pago
+        payment.setStatus(PaymentStatus.FAILED);
         
-        return mapToPaymentResponse(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("Pago marcado como fallido exitosamente");
+        
+        return mapToPaymentResponse(savedPayment);
     }
     
     /**
-     * Reembolsa un pago
+     * Reembolsar un pago
      */
     @Transactional
     public PaymentResponse refundPayment(Long id) {
-        log.info("Procesando reembolso para pago con ID: {}", id);
+        log.info("Reembolsando pago con ID: {}", id);
         
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", id));
         
-        if (!payment.canRefund()) {
-            throw new BusinessException("Este pago no puede ser reembolsado. Estado actual: " + payment.getStatus());
+        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+            throw new BusinessException("Solo se pueden reembolsar pagos completados");
         }
         
-        // Marcar como reembolsado
-        payment.markAsRefunded();
-        payment = paymentRepository.save(payment);
+        // Actualizar pago
+        payment.setStatus(PaymentStatus.REFUNDED);
         
-        log.info("Reembolso procesado exitosamente");
-        return mapToPaymentResponse(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("Pago reembolsado exitosamente");
+        
+        return mapToPaymentResponse(savedPayment);
     }
     
     /**
-     * Obtiene un pago por su ID
+     * Obtiene un pago por ID
      */
     @Transactional(readOnly = true)
     public PaymentResponse getPayment(Long id) {
@@ -243,12 +229,10 @@ public class PaymentService {
         
         BigDecimal cashPayments = BigDecimal.ZERO;
         BigDecimal cardPayments = BigDecimal.ZERO;
-        BigDecimal transferPayments = BigDecimal.ZERO;
-        BigDecimal insurancePayments = BigDecimal.ZERO;
-        BigDecimal onlinePayments = BigDecimal.ZERO;
+        BigDecimal digitalPayments = BigDecimal.ZERO;
         
         long completedCount = 0;
-        long pendingCount = 0;
+        long processingCount = 0;
         long refundedCount = 0;
         long failedCount = 0;
         
@@ -270,23 +254,16 @@ public class PaymentService {
                         case CASH:
                             cashPayments = cashPayments.add(amount);
                             break;
-                        case CREDIT_CARD:
-                        case DEBIT_CARD:
+                        case CARD:
                             cardPayments = cardPayments.add(amount);
                             break;
-                        case BANK_TRANSFER:
-                            transferPayments = transferPayments.add(amount);
-                            break;
-                        case INSURANCE:
-                            insurancePayments = insurancePayments.add(amount);
-                            break;
-                        default:
-                            onlinePayments = onlinePayments.add(amount);
+                        case DIGITAL:
+                            digitalPayments = digitalPayments.add(amount);
                             break;
                     }
                     break;
-                case PENDING:
-                    pendingCount++;
+                case PROCESSING:
+                    processingCount++;
                     break;
                 case REFUNDED:
                     refundedCount++;
@@ -314,11 +291,9 @@ public class PaymentService {
                 .averageTransactionAmount(averageAmount)
                 .cashPayments(cashPayments)
                 .cardPayments(cardPayments)
-                .transferPayments(transferPayments)
-                .insurancePayments(insurancePayments)
-                .onlinePayments(onlinePayments)
+                .digitalPayments(digitalPayments)
                 .completedPayments(completedCount)
-                .pendingPayments(pendingCount)
+                .processingPayments(processingCount)
                 .refundedPayments(refundedCount)
                 .failedPayments(failedCount)
                 .startDate(startDate)
@@ -363,7 +338,7 @@ public class PaymentService {
                 .doctorName(appointment.getDoctor().getFirstName() + " " + appointment.getDoctor().getLastName())
                 .specialty(appointment.getSpecialty().getName())
                 .appointmentDate(appointment.getAppointmentDate())
-                .appointmentTime(appointment.getStartTime())
+                .timeBlock(appointment.getTimeBlock())
                 .paymentMethodName(payment.getPaymentMethod().getName())
                 .paymentMethodType(payment.getPaymentMethod().getType())
                 .amount(payment.getAmount())

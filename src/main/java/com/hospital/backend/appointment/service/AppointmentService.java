@@ -12,6 +12,8 @@ import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.AppointmentStatus;
+import com.hospital.backend.enums.PaymentStatus;
+import com.hospital.backend.enums.TimeBlock;
 import com.hospital.backend.user.entity.Doctor;
 import com.hospital.backend.user.entity.Patient;
 import com.hospital.backend.user.repository.DoctorRepository;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 
 /**
  * Servicio para la gestión de citas médicas
+ * Adaptado a la nueva lógica con bloques de tiempo y pago obligatorio
  */
 @Service
 @RequiredArgsConstructor
@@ -50,6 +53,7 @@ public class AppointmentService {
     
     /**
      * Crear una nueva cita médica
+     * NOTA: Según nueva lógica, solo se crea con pago confirmado
      */
     @Transactional
     public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
@@ -69,20 +73,25 @@ public class AppointmentService {
         // 2. Validar que el doctor tenga esa especialidad
         validateDoctorSpecialty(doctor, specialty);
         
-        // 3. Validar disponibilidad del doctor
-        validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), 
-                                 request.getStartTime(), 30);
+        // 3. Validar disponibilidad del doctor (por bloque)
+        validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), request.getTimeBlock());
         
-        // 4. Crear la cita
+        // 4. Validar si la especialidad requiere derivación
+        if (specialty.getRequiresReferral() != null && specialty.getRequiresReferral() 
+                && (request.getReferralId() == null)) {
+            throw new BusinessException("Esta especialidad requiere derivación médica");
+        }
+        
+        // 5. Crear la cita (siempre con pago confirmado)
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
         appointment.setDoctor(doctor);
         appointment.setSpecialty(specialty);
         appointment.setAppointmentDate(request.getAppointmentDate());
-        appointment.setStartTime(request.getStartTime());
+        appointment.setTimeBlock(request.getTimeBlock());
         appointment.setReason(request.getReason());
-        appointment.setPrice(calculatePrice(specialty));
         appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
         log.info("Cita creada exitosamente con ID: {}", savedAppointment.getId());
@@ -99,8 +108,8 @@ public class AppointmentService {
         
         Appointment appointment = findAppointmentWithDetails(id);
         
-        // Validar que se puede modificar
-        if (!appointment.canReschedule()) {
+        // Validar que se puede modificar (solo si está programada)
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
             throw new BusinessException("No se puede modificar una cita con estado: " + appointment.getStatus());
         }
         
@@ -109,21 +118,16 @@ public class AppointmentService {
             appointment.setAppointmentDate(request.getAppointmentDate());
         }
         
-        if (request.getStartTime() != null) {
-            appointment.setStartTime(request.getStartTime());
+        if (request.getTimeBlock() != null) {
+            appointment.setTimeBlock(request.getTimeBlock());
             // Validar nueva disponibilidad
             validateDoctorAvailability(appointment.getDoctor().getId(), 
                                      appointment.getAppointmentDate(),
-                                     request.getStartTime(), 
-                                     30);
+                                     request.getTimeBlock());
         }
         
         if (request.getReason() != null && !request.getReason().trim().isEmpty()) {
             appointment.setReason(request.getReason());
-        }
-        
-        if (request.getCancellationReason() != null) {
-            appointment.setCancellationReason(request.getCancellationReason());
         }
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
@@ -156,20 +160,20 @@ public class AppointmentService {
     // =========================
     
     /**
-     * Confirmar una cita
+     * Iniciar consulta
      */
     @Transactional
-    public AppointmentResponse confirmAppointment(Long id) {
-        log.info("Confirmando cita con ID: {}", id);
+    public AppointmentResponse startConsultation(Long id) {
+        log.info("Iniciando consulta con ID: {}", id);
         
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));
         
         if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
-            throw new BusinessException("Solo se pueden confirmar citas programadas");
+            throw new BusinessException("Solo se pueden iniciar consultas programadas");
         }
         
-        appointment.setStatus(AppointmentStatus.CONFIRMED);
+        appointment.setStatus(AppointmentStatus.IN_CONSULTATION);
         Appointment savedAppointment = appointmentRepository.save(appointment);
         
         return mapToResponse(savedAppointment);
@@ -185,8 +189,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));
         
-        if (!appointment.canComplete()) {
-            throw new BusinessException("Solo se pueden completar citas confirmadas");
+        if (appointment.getStatus() != AppointmentStatus.IN_CONSULTATION) {
+            throw new BusinessException("Solo se pueden completar citas en consulta");
         }
         
         appointment.setStatus(AppointmentStatus.COMPLETED);
@@ -199,8 +203,8 @@ public class AppointmentService {
      * Cancelar una cita
      */
     @Transactional
-    public AppointmentResponse cancelAppointment(Long id, String reason) {
-        log.info("Cancelando cita con ID: {} por motivo: {}", id, reason);
+    public AppointmentResponse cancelAppointment(Long id) {
+        log.info("Cancelando cita con ID: {}", id);
         
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));
@@ -210,7 +214,6 @@ public class AppointmentService {
         }
         
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointment.setCancellationReason(reason);
         Appointment savedAppointment = appointmentRepository.save(appointment);
         
         return mapToResponse(savedAppointment);
@@ -226,8 +229,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));
         
-        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
-            throw new BusinessException("Solo se pueden marcar como no asistió las citas confirmadas");
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new BusinessException("Solo se pueden marcar como no asistió las citas programadas");
         }
         
         appointment.setStatus(AppointmentStatus.NO_SHOW);
@@ -250,9 +253,7 @@ public class AppointmentService {
             throw new ResourceNotFoundException("Patient", "id", patientId);
         }
         
-        Page<Appointment> appointmentPage = appointmentRepository
-                .findByPatientIdOrderByAppointmentDateDescStartTimeDesc(patientId, pageable);
-        
+        Page<Appointment> appointmentPage = appointmentRepository.findByPatientId(patientId, pageable);
         Page<AppointmentResponse> mappedPage = appointmentPage.map(this::mapToResponse);
         return new PageResponse<>(mappedPage);
     }
@@ -267,15 +268,13 @@ public class AppointmentService {
             throw new ResourceNotFoundException("Doctor", "id", doctorId);
         }
         
-        Page<Appointment> appointmentPage = appointmentRepository
-                .findByDoctorIdOrderByAppointmentDateAscStartTimeAsc(doctorId, pageable);
-        
+        Page<Appointment> appointmentPage = appointmentRepository.findByDoctorId(doctorId, pageable);
         Page<AppointmentResponse> mappedPage = appointmentPage.map(this::mapToResponse);
         return new PageResponse<>(mappedPage);
     }
     
     /**
-     * Obtener citas de una especialidad
+     * Obtener citas por especialidad
      */
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getAppointmentsBySpecialty(Long specialtyId, Pageable pageable) {
@@ -284,9 +283,7 @@ public class AppointmentService {
             throw new ResourceNotFoundException("Specialty", "id", specialtyId);
         }
         
-        Page<Appointment> appointmentPage = appointmentRepository
-                .findBySpecialtyIdOrderByAppointmentDateAscStartTimeAsc(specialtyId, pageable);
-        
+        Page<Appointment> appointmentPage = appointmentRepository.findBySpecialtyId(specialtyId, pageable);
         Page<AppointmentResponse> mappedPage = appointmentPage.map(this::mapToResponse);
         return new PageResponse<>(mappedPage);
     }
@@ -296,15 +293,13 @@ public class AppointmentService {
      */
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getAppointmentsByStatus(AppointmentStatus status, Pageable pageable) {
-        Page<Appointment> appointmentPage = appointmentRepository
-                .findByStatusOrderByAppointmentDateAscStartTimeAsc(status, pageable);
-        
+        Page<Appointment> appointmentPage = appointmentRepository.findByStatus(status, pageable);
         Page<AppointmentResponse> mappedPage = appointmentPage.map(this::mapToResponse);
         return new PageResponse<>(mappedPage);
     }
     
     /**
-     * Obtener citas de un doctor en una fecha específica
+     * Obtener citas de un doctor por fecha
      */
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getDoctorAppointmentsByDate(Long doctorId, LocalDate date) {
@@ -313,181 +308,132 @@ public class AppointmentService {
             throw new ResourceNotFoundException("Doctor", "id", doctorId);
         }
         
-        List<Appointment> appointments = appointmentRepository
-                .findByDoctorIdAndAppointmentDateOrderByStartTimeAsc(doctorId, date);
-        
+        List<Appointment> appointments = appointmentRepository.findByDoctorIdAndAppointmentDate(doctorId, date);
         return appointments.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
     
-    // =========================
-    // Estadísticas y reportes
-    // =========================
+    /**
+     * Obtener citas por bloque de tiempo y fecha
+     */
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAppointmentsByDateAndTimeBlock(LocalDate date, TimeBlock timeBlock) {
+        List<Appointment> appointments = appointmentRepository.findByAppointmentDateAndTimeBlock(date, timeBlock);
+        return appointments.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     
     /**
-     * Obtener resumen de citas por rango de fechas
+     * Obtener resumen de citas
      */
     @Transactional(readOnly = true)
     public AppointmentSummaryResponse getAppointmentSummary(LocalDate startDate, LocalDate endDate) {
-        log.info("Generando resumen de citas desde {} hasta {}", startDate, endDate);
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
         
-        AppointmentSummaryResponse summary = new AppointmentSummaryResponse();
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         
-        // Contar por estados
-        summary.setScheduledCount(appointmentRepository.countByStatusAndDateRange(
-                AppointmentStatus.SCHEDULED, startDate, endDate));
-        summary.setConfirmedCount(appointmentRepository.countByStatusAndDateRange(
-                AppointmentStatus.CONFIRMED, startDate, endDate));
-        summary.setCompletedCount(appointmentRepository.countByStatusAndDateRange(
-                AppointmentStatus.COMPLETED, startDate, endDate));
-        summary.setCancelledCount(appointmentRepository.countByStatusAndDateRange(
-                AppointmentStatus.CANCELLED, startDate, endDate));
-        summary.setNoShowCount(appointmentRepository.countByStatusAndDateRange(
-                AppointmentStatus.NO_SHOW, startDate, endDate));
+        long total = appointmentRepository.countByAppointmentDateBetween(startDate, endDate);
+        long completed = appointmentRepository.countByStatusAndAppointmentDateBetween(
+                AppointmentStatus.COMPLETED, startDate, endDate);
+        long cancelled = appointmentRepository.countByStatusAndAppointmentDateBetween(
+                AppointmentStatus.CANCELLED, startDate, endDate);
+        long noShow = appointmentRepository.countByStatusAndAppointmentDateBetween(
+                AppointmentStatus.NO_SHOW, startDate, endDate);
+        long scheduled = appointmentRepository.countByStatusAndAppointmentDateBetween(
+                AppointmentStatus.SCHEDULED, startDate, endDate);
+        long inConsultation = appointmentRepository.countByStatusAndAppointmentDateBetween(
+                AppointmentStatus.IN_CONSULTATION, startDate, endDate);
         
-        // Calcular total
-        summary.setTotalAppointments(summary.getScheduledCount() + 
-                                   summary.getConfirmedCount() + 
-                                   summary.getCompletedCount() + 
-                                   summary.getCancelledCount() + 
-                                   summary.getNoShowCount());
-        
-        // Calcular ingresos
-        summary.setTotalRevenue(appointmentRepository.sumRevenueByDateRange(startDate, endDate));
-        
-        summary.setReportDate(LocalDate.now());
-        
-        return summary;
+        return AppointmentSummaryResponse.builder()
+                .totalAppointments(total)
+                .completedAppointments(completed)
+                .cancelledAppointments(cancelled)
+                .noShowAppointments(noShow)
+                .scheduledAppointments(scheduled)
+                .inConsultationAppointments(inConsultation)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
     }
     
     // =========================
-    // Métodos auxiliares privados
+    // Métodos auxiliares
     // =========================
     
     /**
-     * Buscar cita con detalles completos
+     * Buscar cita con detalles
      */
     private Appointment findAppointmentWithDetails(Long id) {
-        return appointmentRepository.findByIdWithDetails(id)
-                .orElse(appointmentRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id)));
+        return appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));
     }
     
     /**
      * Validar que el doctor tenga la especialidad
      */
     private void validateDoctorSpecialty(Doctor doctor, Specialty specialty) {
-        // Simplificamos la validación para evitar problemas de lazy loading
-        // En un entorno real, esto se podría optimizar con queries específicas
+        boolean hasDoctorSpecialty = doctor.getSpecialties().stream()
+                .anyMatch(ds -> ds.getSpecialty().getId().equals(specialty.getId()));
         
-        boolean hasSpecialty = false;
-        
-        try {
-            if (doctor.getSpecialties() != null) {
-                hasSpecialty = doctor.getSpecialties().stream()
-                        .anyMatch(ds -> ds.getSpecialty() != null && 
-                                       ds.getSpecialty().getId().equals(specialty.getId()));
-            }
-        } catch (Exception e) {
-            // Si hay problemas con lazy loading, asumimos que tiene la especialidad
-            // En producción deberíamos hacer una query específica
-            log.warn("Error validando especialidad del doctor {}: {}", doctor.getId(), e.getMessage());
-            hasSpecialty = true;
-        }
-        
-        if (!hasSpecialty) {
-            throw new BusinessException("El doctor no tiene la especialidad: " + specialty.getName());
+        if (!hasDoctorSpecialty) {
+            throw new BusinessException(
+                    String.format("El doctor %s %s no tiene la especialidad %s", 
+                            doctor.getFirstName(), doctor.getLastName(), specialty.getName())
+            );
         }
     }
     
     /**
-     * Validar disponibilidad del doctor
+     * Validar disponibilidad del doctor por bloque
      */
-    private void validateDoctorAvailability(Long doctorId, LocalDate date, LocalTime startTime, Integer duration) {
-        // Verificar que no hay conflictos de horario
-        if (appointmentRepository.existsByDoctorAndDateAndTime(doctorId, date, startTime)) {
-            throw new BusinessException("El doctor ya tiene una cita en ese horario");
+    private void validateDoctorAvailability(Long doctorId, LocalDate date, TimeBlock timeBlock) {
+        // Verificar si el doctor está disponible en ese bloque
+        boolean isAvailable = availabilityService.isDoctorAvailableInTimeBlock(doctorId, date, timeBlock);
+        
+        if (!isAvailable) {
+            throw new BusinessException(
+                    String.format("El doctor no está disponible en la fecha %s, bloque %s", 
+                            date, timeBlock.getDisplayName())
+            );
         }
         
-        // Verificar que está dentro del horario de trabajo (usando AvailabilityService)
-        if (!availabilityService.isDoctorAvailable(doctorId, date, startTime, duration)) {
-            throw new BusinessException("El doctor no está disponible en ese horario");
-        }
-    }
-    
-    /**
-     * Calcular precio de la cita
-     */
-    private BigDecimal calculatePrice(Specialty specialty) {
-        BigDecimal basePrice = specialty.getConsultationPrice();
-        BigDecimal discount = specialty.getDiscountPercentage();
+        // Verificar capacidad del bloque
+        boolean hasCapacity = availabilityService.hasBlockCapacity(doctorId, date, timeBlock);
         
-        if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal discountAmount = basePrice.multiply(discount)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            return basePrice.subtract(discountAmount);
+        if (!hasCapacity) {
+            throw new BusinessException(
+                    String.format("El bloque %s del %s ya está a capacidad máxima", 
+                            timeBlock.getDisplayName(), date)
+            );
         }
-        
-        return basePrice;
     }
     
     /**
      * Mapear entidad a DTO de respuesta
      */
     private AppointmentResponse mapToResponse(Appointment appointment) {
-        AppointmentResponse response = new AppointmentResponse();
-        
-        response.setId(appointment.getId());
-        response.setAppointmentDate(appointment.getAppointmentDate());
-        response.setStartTime(appointment.getStartTime());
-        response.setEndTime(appointment.getEndTime()); // Método calculado en la entidad
-        response.setReason(appointment.getReason());
-        response.setPrice(appointment.getPrice());
-        response.setStatus(appointment.getStatus());
-        response.setCancellationReason(appointment.getCancellationReason());
-        response.setFollowUpAppointmentId(appointment.getFollowUpAppointmentId());
-        response.setCreatedAt(appointment.getCreatedAt());
-        response.setUpdatedAt(appointment.getUpdatedAt());
-        
-        // Mapear información del paciente (con null checks)
-        if (appointment.getPatient() != null) {
-            Patient patient = appointment.getPatient();
-            AppointmentResponse.PatientBasicInfo patientInfo = new AppointmentResponse.PatientBasicInfo();
-            patientInfo.setId(patient.getId());
-            patientInfo.setFirstName(patient.getFirstName());
-            patientInfo.setLastName(patient.getLastName());
-            patientInfo.setDocumentNumber(patient.getDocumentNumber());
-            patientInfo.setPhone(patient.getPhone());
-            response.setPatient(patientInfo);
-        }
-        
-        // Mapear información del doctor (con null checks)
-        if (appointment.getDoctor() != null) {
-            Doctor doctor = appointment.getDoctor();
-            AppointmentResponse.DoctorBasicInfo doctorInfo = new AppointmentResponse.DoctorBasicInfo();
-            doctorInfo.setId(doctor.getId());
-            doctorInfo.setFirstName(doctor.getFirstName());
-            doctorInfo.setLastName(doctor.getLastName());
-            doctorInfo.setCmpNumber(doctor.getCmpNumber());
-            doctorInfo.setConsultationRoom(doctor.getConsultationRoom());
-            response.setDoctor(doctorInfo);
-        }
-        
-        // Mapear información de la especialidad (con null checks)
-        if (appointment.getSpecialty() != null) {
-            Specialty specialty = appointment.getSpecialty();
-            AppointmentResponse.SpecialtyBasicInfo specialtyInfo = new AppointmentResponse.SpecialtyBasicInfo();
-            specialtyInfo.setId(specialty.getId());
-            specialtyInfo.setName(specialty.getName());
-            specialtyInfo.setDescription(specialty.getDescription());
-            specialtyInfo.setConsultationPrice(specialty.getConsultationPrice());
-            specialtyInfo.setDiscountPercentage(specialty.getDiscountPercentage());
-            specialtyInfo.setFinalPrice(specialty.getFinalPrice());
-            specialtyInfo.setIsActive(specialty.getIsActive());
-            response.setSpecialty(specialtyInfo);
-        }
-        
-        return response;
+        return AppointmentResponse.builder()
+                .id(appointment.getId())
+                .patientId(appointment.getPatient().getId())
+                .patientName(appointment.getPatient().getFirstName() + " " + appointment.getPatient().getLastName())
+                .doctorId(appointment.getDoctor().getId())
+                .doctorName(appointment.getDoctor().getFirstName() + " " + appointment.getDoctor().getLastName())
+                .specialtyId(appointment.getSpecialty().getId())
+                .specialtyName(appointment.getSpecialty().getName())
+                .appointmentDate(appointment.getAppointmentDate())
+                .timeBlock(appointment.getTimeBlock())
+                .reason(appointment.getReason())
+                .status(appointment.getStatus())
+                .paymentStatus(appointment.getPaymentStatus())
+                .price(appointment.getPrice())
+                .createdAt(appointment.getCreatedAt())
+                .updatedAt(appointment.getUpdatedAt())
+                .build();
     }
 }

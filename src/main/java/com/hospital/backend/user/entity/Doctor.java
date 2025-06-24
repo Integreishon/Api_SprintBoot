@@ -3,6 +3,7 @@ package com.hospital.backend.user.entity;
 
 import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.common.entity.BaseEntity;
+import com.hospital.backend.enums.DoctorType;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,6 +11,10 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Entidad Doctor para gestión de personal médico
+ * Incluye clasificación por tipo y capacidad de derivación
+ */
 @Data
 @Entity
 @Table(name = "doctors")
@@ -46,6 +51,19 @@ public class Doctor extends BaseEntity {
     
     @Column(name = "profile_image")
     private String profileImage;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "doctor_type", nullable = false)
+    private DoctorType doctorType = DoctorType.SPECIALIST; // PRIMARY, SPECIALIST
+    
+    @Column(name = "is_external", nullable = false)
+    private Boolean isExternal = false;
+    
+    @Column(name = "can_refer", nullable = false)
+    private Boolean canRefer = false;
+    
+    @Column(name = "contact_phone")
+    private String contactPhone;
     
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<DoctorSpecialty> specialties;

@@ -1,17 +1,15 @@
 package com.hospital.backend.enums;
 
 /**
- * Niveles de severidad para registros médicos
+ * Tipos de doctores en el sistema
  */
-public enum SeverityLevel {
-    LOW("Baja"),
-    MEDIUM("Media"),
-    HIGH("Alta"),
-    CRITICAL("Crítica");
+public enum DoctorType {
+    PRIMARY("Médico Principal"),
+    SPECIALIST("Especialista");
     
     private final String displayName;
     
-    SeverityLevel(String displayName) {
+    DoctorType(String displayName) {
         this.displayName = displayName;
     }
     

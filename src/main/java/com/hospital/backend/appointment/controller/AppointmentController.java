@@ -1,16 +1,16 @@
 package com.hospital.backend.appointment.controller;
 
-import com.hospital.backend.appointment.dto.request.AvailableSlotsRequest;
 import com.hospital.backend.appointment.dto.request.CreateAppointmentRequest;
 import com.hospital.backend.appointment.dto.request.UpdateAppointmentRequest;
 import com.hospital.backend.appointment.dto.response.AppointmentResponse;
 import com.hospital.backend.appointment.dto.response.AppointmentSummaryResponse;
-import com.hospital.backend.appointment.dto.response.AvailableSlotResponse;
+import com.hospital.backend.appointment.dto.response.BlockAvailabilityResponse;
 import com.hospital.backend.appointment.service.AppointmentService;
 import com.hospital.backend.appointment.service.AvailabilityService;
 import com.hospital.backend.common.dto.ApiResponse;
 import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.enums.AppointmentStatus;
+import com.hospital.backend.enums.TimeBlock;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,9 +27,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador REST para la gestión de citas médicas
+ * Adaptado a la nueva lógica de bloques de tiempo
  */
 @RestController
 @RequestMapping("/appointments")
@@ -101,16 +103,16 @@ public class AppointmentController {
     // Cambios de estado
     // =========================
     
-    @Operation(summary = "Confirmar una cita")
-    @PutMapping("/{id}/confirm")
+    @Operation(summary = "Iniciar consulta")
+    @PutMapping("/{id}/start")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ApiResponse<AppointmentResponse>> confirmAppointment(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> startConsultation(
             @Parameter(description = "ID de la cita") @PathVariable Long id) {
         
-        log.info("PUT /api/appointments/{}/confirm - Confirmando cita", id);
-        AppointmentResponse response = appointmentService.confirmAppointment(id);
+        log.info("PUT /api/appointments/{}/start - Iniciando consulta", id);
+        AppointmentResponse response = appointmentService.startConsultation(id);
         
-        return ResponseEntity.ok(ApiResponse.success("Cita confirmada exitosamente", response));
+        return ResponseEntity.ok(ApiResponse.success("Consulta iniciada exitosamente", response));
     }
     
     @Operation(summary = "Completar una cita")
@@ -129,11 +131,10 @@ public class AppointmentController {
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ApiResponse<AppointmentResponse>> cancelAppointment(
-            @Parameter(description = "ID de la cita") @PathVariable Long id,
-            @Parameter(description = "Motivo de cancelación") @RequestParam(required = false) String reason) {
+            @Parameter(description = "ID de la cita") @PathVariable Long id) {
         
-        log.info("PUT /api/appointments/{}/cancel - Cancelando cita por: {}", id, reason);
-        AppointmentResponse response = appointmentService.cancelAppointment(id, reason);
+        log.info("PUT /api/appointments/{}/cancel - Cancelando cita", id);
+        AppointmentResponse response = appointmentService.cancelAppointment(id);
         
         return ResponseEntity.ok(ApiResponse.success("Cita cancelada exitosamente", response));
     }
@@ -231,49 +232,53 @@ public class AppointmentController {
     // Disponibilidad
     // =========================
     
-    @Operation(summary = "Obtener slots disponibles")
-    @PostMapping("/available-slots")
+    @Operation(summary = "Obtener bloques disponibles")
+    @GetMapping("/available-blocks/{doctorId}")
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ApiResponse<List<AvailableSlotResponse>>> getAvailableSlots(
-            @Valid @RequestBody AvailableSlotsRequest request) {
-        
-        log.info("POST /api/appointments/available-slots - Obteniendo slots disponibles para doctor: {}, fecha: {}", 
-                request.getDoctorId(), request.getDate());
-        
-        List<AvailableSlotResponse> response = availabilityService.getAvailableSlots(request);
-        
-        return ResponseEntity.ok(ApiResponse.success("Slots disponibles obtenidos", response));
-    }
-    
-    @Operation(summary = "Obtener slots disponibles por parámetros GET")
-    @GetMapping("/available-slots")
-    @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ApiResponse<List<AvailableSlotResponse>>> getAvailableSlotsGet(
-            @Parameter(description = "ID del doctor") @RequestParam Long doctorId,
-            @Parameter(description = "ID de la especialidad") @RequestParam Long specialtyId,
+    public ResponseEntity<ApiResponse<List<BlockAvailabilityResponse>>> getAvailableBlocks(
+            @Parameter(description = "ID del doctor") @PathVariable Long doctorId,
             @Parameter(description = "Fecha (YYYY-MM-DD)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("GET /api/appointments/available-slots - Obteniendo slots disponibles para doctor: {}, fecha: {}", 
-                doctorId, date);
+        log.info("GET /api/appointments/available-blocks/{} - Obteniendo bloques disponibles para doctor", doctorId);
+        List<BlockAvailabilityResponse> response = availabilityService.getAvailableBlocks(doctorId, date);
         
-        AvailableSlotsRequest request = new AvailableSlotsRequest(doctorId, specialtyId, date);
-        List<AvailableSlotResponse> response = availabilityService.getAvailableSlots(request);
-        
-        return ResponseEntity.ok(ApiResponse.success("Slots disponibles obtenidos", response));
+        return ResponseEntity.ok(ApiResponse.success("Bloques disponibles obtenidos", response));
     }
     
-    // =========================
-    // Estadísticas y reportes
-    // =========================
+    @Operation(summary = "Obtener disponibilidad por especialidad")
+    @GetMapping("/availability/specialty/{specialtyId}")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN') or hasRole('DOCTOR')")
+    public ResponseEntity<ApiResponse<Map<TimeBlock, List<BlockAvailabilityResponse>>>> getAvailabilityBySpecialty(
+            @Parameter(description = "ID de la especialidad") @PathVariable Long specialtyId,
+            @Parameter(description = "Fecha (YYYY-MM-DD)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        log.info("GET /api/appointments/availability/specialty/{} - Obteniendo disponibilidad por especialidad", specialtyId);
+        Map<TimeBlock, List<BlockAvailabilityResponse>> response = availabilityService.getAvailabilityBySpecialty(specialtyId, date);
+        
+        return ResponseEntity.ok(ApiResponse.success("Disponibilidad por especialidad obtenida", response));
+    }
+    
+    @Operation(summary = "Obtener citas por bloque de tiempo y fecha")
+    @GetMapping("/date/{date}/block/{block}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
+    public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getAppointmentsByDateAndTimeBlock(
+            @Parameter(description = "Fecha (YYYY-MM-DD)") @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @Parameter(description = "Bloque de tiempo") @PathVariable TimeBlock block) {
+        
+        log.info("GET /api/appointments/date/{}/block/{} - Obteniendo citas por fecha y bloque", date, block);
+        List<AppointmentResponse> response = appointmentService.getAppointmentsByDateAndTimeBlock(date, block);
+        
+        return ResponseEntity.ok(ApiResponse.success("Citas por fecha y bloque obtenidas", response));
+    }
     
     @Operation(summary = "Obtener resumen de citas por rango de fechas")
     @GetMapping("/summary")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ApiResponse<AppointmentSummaryResponse>> getAppointmentSummary(
-            @Parameter(description = "Fecha inicio (YYYY-MM-DD)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @Parameter(description = "Fecha fin (YYYY-MM-DD)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @Parameter(description = "Fecha inicio (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "Fecha fin (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
-        log.info("GET /api/appointments/summary - Obteniendo resumen desde {} hasta {}", startDate, endDate);
+        log.info("GET /api/appointments/summary - Obteniendo resumen de citas");
         AppointmentSummaryResponse response = appointmentService.getAppointmentSummary(startDate, endDate);
         
         return ResponseEntity.ok(ApiResponse.success("Resumen de citas obtenido", response));

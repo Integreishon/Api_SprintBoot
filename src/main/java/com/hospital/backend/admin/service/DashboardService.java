@@ -60,8 +60,13 @@ public class DashboardService {
             BigDecimal totalRevenue = getSafeBigDecimal(() -> paymentRepository.calculateTotalRevenue());
             
             // Métricas de hoy (simplificadas)
-            Long todayAppointments = getSafeCount(() -> appointmentRepository.countByAppointmentDateBetween(startOfDay, endOfDay));
-            Long todayPatients = 0L; // Simplificado por ahora
+            Long todayAppointments = getSafeCount(() -> appointmentRepository.countByAppointmentDateBetween(today, today));
+            Long todayPatients = getSafeCount(new CountSupplier() {
+                @Override
+                public Long get() throws Exception {
+                    return 0L; // Simplificado por ahora
+                }
+            });
             BigDecimal todayRevenue = getSafeBigDecimal(() -> paymentRepository.calculateRevenueForDateRange(startOfDay, endOfDay));
             
             // Métricas semanales (simplificadas)
@@ -272,8 +277,8 @@ public class DashboardService {
             Integer dayOfWeek = date.getDayOfWeek().getValue();
             Long totalSlots = availabilityRepository.countTotalSlotsForDay(dayOfWeek);
             Long scheduledAppointments = appointmentRepository.countByAppointmentDateBetween(
-                    date.atStartOfDay(), 
-                    date.atTime(LocalTime.MAX)
+                    date, 
+                    date
             );
             
             if (totalSlots == null || totalSlots == 0) {

@@ -1,6 +1,7 @@
 // DTO para configurar disponibilidad horaria de doctores
 package com.hospital.backend.user.dto.request;
 
+import com.hospital.backend.enums.TimeBlock;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -8,8 +9,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalTime;
-
+/**
+ * DTO para configurar disponibilidad horaria de doctores
+ * Adaptado a la nueva lógica de bloques de tiempo
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,12 +23,11 @@ public class DoctorAvailabilityRequest {
     @Max(value = 7, message = "El día debe ser máximo 7 (Domingo)")
     private Integer dayOfWeek;
     
-    @NotNull(message = "La hora de inicio es obligatoria")
-    private LocalTime startTime;
+    @NotNull(message = "El bloque de tiempo es obligatorio")
+    private TimeBlock timeBlock;
     
-    @NotNull(message = "La hora de fin es obligatoria")
-    private LocalTime endTime;
+    @Min(value = 1, message = "La capacidad mínima es 1 paciente")
+    private Integer maxPatients;
     
-    @Min(value = 10, message = "La duración mínima del turno es 10 minutos")
-    private Integer slotDuration = 30; // 30 minutos por defecto
+    private Boolean isAvailable = true;
 }

@@ -99,11 +99,14 @@ public class MedicalAttachmentService {
             case IMAGE -> "image/jpeg";
             case DOCUMENT -> "application/msword";
             case LAB_RESULT -> "application/pdf";
-            case X_RAY -> "image/dicom";
+            case XRAY -> "image/dicom";
             case ULTRASOUND -> "image/dicom";
             case MRI -> "image/dicom";
             case CT_SCAN -> "image/dicom";
+            case AUDIO -> "audio/mpeg";
+            case VIDEO -> "video/mp4";
             case OTHER -> "application/octet-stream";
+            default -> "application/octet-stream";
         };
     }
 } 

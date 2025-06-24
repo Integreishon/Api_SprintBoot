@@ -1,21 +1,22 @@
 package com.hospital.backend.appointment.dto.request;
 
+import com.hospital.backend.enums.TimeBlock;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 /**
  * DTO para crear una nueva cita médica
+ * Adaptado a la nueva lógica de bloques de tiempo
  */
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateAppointmentRequest {
@@ -33,9 +34,11 @@ public class CreateAppointmentRequest {
     @FutureOrPresent(message = "La fecha de la cita debe ser hoy o en el futuro")
     private LocalDate appointmentDate;
     
-    @NotNull(message = "La hora de inicio es obligatoria")
-    private LocalTime startTime;
+    @NotNull(message = "El bloque de tiempo es obligatorio")
+    private TimeBlock timeBlock;
     
     @NotBlank(message = "El motivo de la consulta es obligatorio")
     private String reason;
+    
+    private Long referralId;
 }

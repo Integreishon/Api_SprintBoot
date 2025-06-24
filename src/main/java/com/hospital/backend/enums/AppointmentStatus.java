@@ -3,14 +3,14 @@ package com.hospital.backend.enums;
 
 /**
  * Estados de una cita médica en el sistema
+ * NOTA: Todas las citas requieren pago confirmado para ser creadas
  */
 public enum AppointmentStatus {
-    SCHEDULED("Programada"),
-    CONFIRMED("Confirmada"),
+    SCHEDULED("Programada"), // Solo existe si ya está pagada
+    IN_CONSULTATION("En consulta"),
     COMPLETED("Completada"),
     CANCELLED("Cancelada"),
-    NO_SHOW("No asistió"),
-    RESCHEDULED("Reprogramada");
+    NO_SHOW("No asistió");
     
     private final String displayName;
     

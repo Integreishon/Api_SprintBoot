@@ -13,6 +13,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/**
+ * Repository para gestión de pacientes
+ * Adaptado a la nueva lógica de Urovital
+ */
 @Repository
 public interface PatientRepository extends JpaRepository<Patient, Long> {
     
@@ -20,17 +24,17 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     
     Optional<Patient> findByUserEmail(String email);
     
-    Optional<Patient> findByDocumentTypeIdAndDocumentNumber(Long documentTypeId, String documentNumber);
+    Optional<Patient> findByDocumentNumber(String documentNumber);
     
-    boolean existsByDocumentTypeIdAndDocumentNumber(Long documentTypeId, String documentNumber);
+    boolean existsByDocumentNumber(String documentNumber);
     
     boolean existsByUserEmail(String email);
     
-    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.documentType")
-    Page<Patient> findAllWithUserAndDocumentType(Pageable pageable);
+    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user")
+    Page<Patient> findAllWithUser(Pageable pageable);
     
-    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.documentType WHERE p.id = :id")
-    Optional<Patient> findByIdWithUserAndDocumentType(@Param("id") Long id);
+    @Query("SELECT p FROM Patient p LEFT JOIN FETCH p.user WHERE p.id = :id")
+    Optional<Patient> findByIdWithUser(@Param("id") Long id);
     
     @Query("SELECT p FROM Patient p WHERE " +
            "LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")

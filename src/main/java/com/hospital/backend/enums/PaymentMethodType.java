@@ -2,16 +2,13 @@
 package com.hospital.backend.enums;
 
 /**
- * Enumeration for payment method types in the hospital system
+ * Tipos de métodos de pago en el sistema
+ * Adaptados específicamente para Centro Médico Urovital
  */
 public enum PaymentMethodType {
     CASH("Efectivo"),
-    CREDIT_CARD("Tarjeta de Crédito"),
-    DEBIT_CARD("Tarjeta de Débito"),
-    BANK_TRANSFER("Transferencia Bancaria"),
-    INSURANCE("Seguro Médico"),
-    ONLINE("Pago en Línea"),
-    OTHER("Otro");
+    DIGITAL("Digital"), // Para Yape/Plin
+    CARD("Tarjeta");   // Tarjeta de crédito/débito
     
     private final String displayName;
     

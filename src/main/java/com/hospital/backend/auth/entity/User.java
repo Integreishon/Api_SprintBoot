@@ -7,6 +7,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDateTime;
+
+/**
+ * Entidad Usuario para autenticación y autorización
+ * Roles: PATIENT, DOCTOR, SPECIALIST, RECEPTIONIST, ADMIN
+ */
 @Data
 @Entity
 @Table(name = "users")
@@ -27,6 +33,6 @@ public class User extends BaseEntity {
     private Boolean isActive = true;
     
     @Column(name = "last_login")
-    private java.time.LocalDateTime lastLogin;
+    private LocalDateTime lastLogin;
     
 }

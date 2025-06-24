@@ -2,6 +2,7 @@ package com.hospital.backend.appointment.repository;
 
 import com.hospital.backend.appointment.entity.Appointment;
 import com.hospital.backend.enums.AppointmentStatus;
+import com.hospital.backend.enums.TimeBlock;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 /**
  * Repository para operaciones de base de datos de citas médicas
+ * Adaptado a la nueva lógica de bloques de tiempo
  */
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -27,31 +29,42 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // =========================
     
     /**
-     * Verificar si un doctor tiene cita en una fecha y hora específica (versión simplificada)
+     * Verificar si un doctor tiene cita en una fecha y bloque específico
      */
     @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE " +
            "a.doctor.id = :doctorId AND " +
            "a.appointmentDate = :date AND " +
-           "a.startTime = :startTime AND " +
-           "(a.status = 'SCHEDULED' OR a.status = 'CONFIRMED')")
-    boolean existsByDoctorAndDateAndTime(@Param("doctorId") Long doctorId,
+           "a.timeBlock = :timeBlock AND " +
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS')")
+    boolean existsByDoctorAndDateAndTimeBlock(@Param("doctorId") Long doctorId,
                                         @Param("date") LocalDate date,
-                                        @Param("startTime") LocalTime startTime);
+                                        @Param("timeBlock") TimeBlock timeBlock);
     
     /**
-     * Buscar citas conflictivas de un doctor en una fecha
+     * Buscar citas conflictivas de un doctor en una fecha y bloque
      */
-    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId " +
-           "AND a.appointmentDate = :date " +
-           "AND ((a.startTime <= :startTime AND FUNCTION('TIME_ADD', a.startTime, 30) > :startTime) " +
-           "OR (a.startTime < FUNCTION('TIME_ADD', :startTime, :duration) AND FUNCTION('TIME_ADD', a.startTime, 30) >= FUNCTION('TIME_ADD', :startTime, :duration)) " +
-           "OR (a.startTime >= :startTime AND FUNCTION('TIME_ADD', a.startTime, 30) <= FUNCTION('TIME_ADD', :startTime, :duration))) " +
-           "AND (a.status = 'SCHEDULED' OR a.status = 'CONFIRMED')")
+    @Query("SELECT a FROM Appointment a WHERE " +
+           "a.doctor.id = :doctorId AND " +
+           "a.appointmentDate = :date AND " +
+           "a.timeBlock = :timeBlock AND " +
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS')")
     List<Appointment> findConflictingAppointments(
             @Param("doctorId") Long doctorId,
             @Param("date") LocalDate date,
-            @Param("startTime") LocalTime startTime,
-            @Param("duration") Integer duration);
+            @Param("timeBlock") TimeBlock timeBlock);
+    
+    /**
+     * Contar citas por doctor, fecha y bloque de tiempo
+     */
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE " +
+           "a.doctor.id = :doctorId AND " +
+           "a.appointmentDate = :date AND " +
+           "a.timeBlock = :timeBlock AND " +
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS')")
+    int countByDoctorIdAndAppointmentDateAndTimeBlock(
+            @Param("doctorId") Long doctorId,
+            @Param("date") LocalDate date,
+            @Param("timeBlock") TimeBlock timeBlock);
     
     // =========================
     // Consultas por entidades
@@ -60,20 +73,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     /**
      * Buscar citas por paciente
      */
-    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId ORDER BY a.appointmentDate DESC, a.startTime DESC")
-    Page<Appointment> findByPatientIdOrderByAppointmentDateDescStartTimeDesc(@Param("patientId") Long patientId, Pageable pageable);
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId ORDER BY a.appointmentDate DESC")
+    Page<Appointment> findByPatientId(@Param("patientId") Long patientId, Pageable pageable);
     
     /**
      * Buscar citas por doctor
      */
-    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId ORDER BY a.appointmentDate ASC, a.startTime ASC")
-    Page<Appointment> findByDoctorIdOrderByAppointmentDateAscStartTimeAsc(@Param("doctorId") Long doctorId, Pageable pageable);
+    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId ORDER BY a.appointmentDate ASC")
+    Page<Appointment> findByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
     
     /**
      * Buscar citas por especialidad
      */
-    @Query("SELECT a FROM Appointment a WHERE a.specialty.id = :specialtyId ORDER BY a.appointmentDate ASC, a.startTime ASC")
-    Page<Appointment> findBySpecialtyIdOrderByAppointmentDateAscStartTimeAsc(@Param("specialtyId") Long specialtyId, Pageable pageable);
+    @Query("SELECT a FROM Appointment a WHERE a.specialty.id = :specialtyId ORDER BY a.appointmentDate ASC")
+    Page<Appointment> findBySpecialtyId(@Param("specialtyId") Long specialtyId, Pageable pageable);
     
     // =========================
     // Consultas por fecha
@@ -82,8 +95,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     /**
      * Buscar citas de un doctor en una fecha específica
      */
-    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId AND a.appointmentDate = :date ORDER BY a.startTime ASC")
-    List<Appointment> findByDoctorIdAndAppointmentDateOrderByStartTimeAsc(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
+    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId AND a.appointmentDate = :date ORDER BY a.timeBlock")
+    List<Appointment> findByDoctorIdAndAppointmentDate(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
+    
+    /**
+     * Buscar citas por fecha y bloque de tiempo
+     */
+    @Query("SELECT a FROM Appointment a WHERE a.appointmentDate = :date AND a.timeBlock = :timeBlock ORDER BY a.doctor.id")
+    List<Appointment> findByAppointmentDateAndTimeBlock(@Param("date") LocalDate date, @Param("timeBlock") TimeBlock timeBlock);
     
     /**
      * Buscar citas de un paciente en un rango de fechas
@@ -91,7 +110,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE " +
            "a.patient.id = :patientId AND " +
            "a.appointmentDate BETWEEN :startDate AND :endDate " +
-           "ORDER BY a.appointmentDate DESC, a.startTime DESC")
+           "ORDER BY a.appointmentDate DESC")
     List<Appointment> findByPatientAndDateRange(@Param("patientId") Long patientId,
                                               @Param("startDate") LocalDate startDate,
                                               @Param("endDate") LocalDate endDate);
@@ -103,16 +122,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     /**
      * Buscar citas por estado
      */
-    @Query("SELECT a FROM Appointment a WHERE a.status = :status ORDER BY a.appointmentDate ASC, a.startTime ASC")
-    Page<Appointment> findByStatusOrderByAppointmentDateAscStartTimeAsc(@Param("status") AppointmentStatus status, Pageable pageable);
+    @Query("SELECT a FROM Appointment a WHERE a.status = :status ORDER BY a.appointmentDate ASC")
+    Page<Appointment> findByStatus(@Param("status") AppointmentStatus status, Pageable pageable);
     
     /**
-     * Buscar citas pendientes de un doctor (scheduled o confirmed)
+     * Buscar citas pendientes de un doctor (scheduled o in_progress)
      */
     @Query("SELECT a FROM Appointment a WHERE " +
            "a.doctor.id = :doctorId AND " +
-           "(a.status = 'SCHEDULED' OR a.status = 'CONFIRMED') " +
-           "ORDER BY a.appointmentDate ASC, a.startTime ASC")
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS') " +
+           "ORDER BY a.appointmentDate ASC")
     List<Appointment> findPendingAppointmentsByDoctor(@Param("doctorId") Long doctorId);
     
     /**
@@ -120,8 +139,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      */
     @Query("SELECT a FROM Appointment a WHERE " +
            "a.patient.id = :patientId AND " +
-           "(a.status = 'SCHEDULED' OR a.status = 'CONFIRMED') " +
-           "ORDER BY a.appointmentDate ASC, a.startTime ASC")
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS') " +
+           "ORDER BY a.appointmentDate ASC")
     List<Appointment> findPendingAppointmentsByPatient(@Param("patientId") Long patientId);
     
     // =========================
@@ -144,14 +163,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE " +
            "a.status = :status AND " +
            "a.appointmentDate BETWEEN :startDate AND :endDate")
-    Long countByStatusAndDateRange(@Param("status") AppointmentStatus status,
+    Long countByStatusAndAppointmentDateBetween(@Param("status") AppointmentStatus status,
                                   @Param("startDate") LocalDate startDate,
                                   @Param("endDate") LocalDate endDate);
     
     /**
      * Sumar ingresos por fecha (solo citas completadas)
      */
-    @Query("SELECT COALESCE(SUM(a.price), 0) FROM Appointment a WHERE " +
+    @Query("SELECT COALESCE(SUM(a.specialty.consultationPrice), 0) FROM Appointment a WHERE " +
            "a.status = 'COMPLETED' AND " +
            "a.appointmentDate BETWEEN :startDate AND :endDate")
     BigDecimal sumRevenueByDateRange(@Param("startDate") LocalDate startDate,
@@ -176,7 +195,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      */
     @Query("SELECT a FROM Appointment a WHERE " +
            "a.appointmentDate = :tomorrow AND " +
-           "(a.status = 'SCHEDULED' OR a.status = 'CONFIRMED')")
+           "(a.status = 'SCHEDULED' OR a.status = 'IN_PROGRESS')")
     List<Appointment> findAppointmentsForReminder(@Param("tomorrow") LocalDate tomorrow);
     
     // =========================
@@ -200,7 +219,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE " +
            "a.doctor.id = :doctorId AND " +
            "a.appointmentDate = :today " +
-           "ORDER BY a.startTime ASC")
+           "ORDER BY a.timeBlock")
     List<Appointment> findTodayAppointmentsByDoctor(@Param("doctorId") Long doctorId, 
                                                    @Param("today") LocalDate today);
     
@@ -218,45 +237,47 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      */
     @Query("SELECT COUNT(a) FROM Appointment a WHERE " +
            "a.appointmentDate BETWEEN :startDate AND :endDate")
-    Long countByAppointmentDateBetween(@Param("startDate") LocalDateTime startDate,
-                                      @Param("endDate") LocalDateTime endDate);
+    Long countByAppointmentDateBetween(@Param("startDate") LocalDate startDate,
+                                      @Param("endDate") LocalDate endDate);
     
     /**
      * Contar pacientes únicos en un rango de fechas
      */
     @Query("SELECT COUNT(DISTINCT a.patient.id) FROM Appointment a WHERE " +
            "a.appointmentDate BETWEEN :startDate AND :endDate")
-    Long countDistinctPatientByAppointmentDateBetween(@Param("startDate") LocalDateTime startDate,
-                                                     @Param("endDate") LocalDateTime endDate);
+    Long countDistinctPatientByAppointmentDateBetween(@Param("startDate") LocalDate startDate,
+                                                     @Param("endDate") LocalDate endDate);
     
     /**
      * Obtener conteo de citas por día para la última semana
      */
-    @Query("SELECT DATE(a.appointmentDate), COUNT(a) FROM Appointment a WHERE " +
+    @Query("SELECT a.appointmentDate, COUNT(a) FROM Appointment a WHERE " +
            "a.appointmentDate >= :startDate " +
-           "GROUP BY DATE(a.appointmentDate) " +
-           "ORDER BY DATE(a.appointmentDate)")
+           "GROUP BY a.appointmentDate " +
+           "ORDER BY a.appointmentDate")
     List<Object[]> countAppointmentsGroupByDayForLastWeek(@Param("startDate") LocalDate startDate);
     
     /**
-     * Obtener top especialidades por número de citas (versión simplificada)
+     * Obtener top especialidades por número de citas
      */
-    @Query("SELECT s.id, s.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
+    @Query("SELECT s.id, s.name, COUNT(a), COALESCE(SUM(s.consultationPrice), 0) " +
            "FROM Appointment a JOIN a.specialty s " +
            "WHERE a.status = 'COMPLETED' " +
            "GROUP BY s.id, s.name " +
-           "ORDER BY COUNT(a) DESC")
-    List<Object[]> findTopSpecialities(int limit);
+           "ORDER BY COUNT(a) DESC " +
+           "LIMIT :limit")
+    List<Object[]> findTopSpecialities(@Param("limit") int limit);
     
     /**
-     * Obtener top doctores por número de citas (versión simplificada)
+     * Obtener top doctores por número de citas
      */
     @Query("SELECT d.id, CONCAT(d.firstName, ' ', d.lastName), " +
-           "'Medicina General', " +
-           "COUNT(a), COALESCE(SUM(a.price), 0), 5.0 " +
-           "FROM Appointment a JOIN a.doctor d " +
+           "s.name, " +
+           "COUNT(a), COALESCE(SUM(s.consultationPrice), 0) " +
+           "FROM Appointment a JOIN a.doctor d JOIN a.specialty s " +
            "WHERE a.status = 'COMPLETED' " +
-           "GROUP BY d.id, d.firstName, d.lastName " +
-           "ORDER BY COUNT(a) DESC")
-    List<Object[]> findTopDoctors(int limit);
+           "GROUP BY d.id, d.firstName, d.lastName, s.name " +
+           "ORDER BY COUNT(a) DESC " +
+           "LIMIT :limit")
+    List<Object[]> findTopDoctors(@Param("limit") int limit);
 }

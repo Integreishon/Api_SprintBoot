@@ -4,11 +4,21 @@ package com.hospital.backend.user.dto.request;
 import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * DTO para actualizar datos de paciente
+ * Adaptado a la nueva lógica de Urovital
+ */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UpdatePatientRequest {
     
     @NotBlank(message = "El nombre es obligatorio")
@@ -42,5 +52,5 @@ public class UpdatePatientRequest {
     
     private String address;
     private String allergies;
-    private String chronicConditions;
+    private String medicalHistory;
 }

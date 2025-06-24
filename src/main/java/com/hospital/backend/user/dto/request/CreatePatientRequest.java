@@ -4,11 +4,21 @@ package com.hospital.backend.user.dto.request;
 import com.hospital.backend.enums.BloodType;
 import com.hospital.backend.enums.Gender;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * DTO para crear nuevo paciente
+ * Adaptado a la nueva lógica de Urovital
+ */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CreatePatientRequest {
     
     @NotBlank(message = "El email es obligatorio")
@@ -19,10 +29,8 @@ public class CreatePatientRequest {
     @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres")
     private String password;
     
-    @NotNull(message = "El tipo de documento es obligatorio")
-    private Long documentTypeId;
-    
     @NotBlank(message = "El número de documento es obligatorio")
+    @Pattern(regexp = "^[0-9]{8}$", message = "El DNI debe tener 8 dígitos")
     private String documentNumber;
     
     @NotBlank(message = "El nombre es obligatorio")
@@ -56,5 +64,5 @@ public class CreatePatientRequest {
     
     private String address;
     private String allergies;
-    private String chronicConditions;
+    private String medicalHistory;
 }

@@ -57,11 +57,10 @@ public class PatientController {
     
     @GetMapping("/document")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Buscar paciente por documento", description = "Busca un paciente por tipo y número de documento")
+    @Operation(summary = "Buscar paciente por documento", description = "Busca un paciente por número de documento")
     public ResponseEntity<ApiResponse<PatientResponse>> getPatientByDocument(
-            @RequestParam String documentNumber,
-            @RequestParam Long documentTypeId) {
-        PatientResponse patient = patientService.findByDocumentNumberAndDocumentType(documentNumber, documentTypeId);
+            @RequestParam String documentNumber) {
+        PatientResponse patient = patientService.findByDocumentNumber(documentNumber);
         return ResponseEntity.ok(ApiResponse.success("Paciente encontrado", patient));
     }
     

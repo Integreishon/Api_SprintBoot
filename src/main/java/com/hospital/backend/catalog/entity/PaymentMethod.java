@@ -10,6 +10,10 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+/**
+ * Métodos de pago
+ * Adaptados para métodos locales peruanos
+ */
 @Entity
 @Table(name = "payment_methods")
 @Getter
@@ -18,19 +22,25 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PaymentMethod extends BaseEntity {
 
-    @Column(name = "name", length = 100, nullable = false)
-    private String name;
+    @Column(name = "name", length = 50, nullable = false)
+    private String name; // "Efectivo", "Yape", "Plin"
     
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private PaymentMethodType type;
+    private PaymentMethodType type; // CASH, DIGITAL, CARD
     
     @Column(name = "processing_fee", precision = 5, scale = 2)
-    private BigDecimal processingFee; // Comisión en porcentaje
+    private BigDecimal processingFee = BigDecimal.ZERO; // Comisión en porcentaje
+    
+    @Column(name = "integration_code", length = 100)
+    private String integrationCode;
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
     
-    @Column(name = "integration_code", length = 50)
-    private String integrationCode; // Código para integración con pasarelas de pago
+    @Column(name = "requires_manual_validation", nullable = false)
+    private Boolean requiresManualValidation = false;
+    
+    @Column(name = "is_digital", nullable = false)
+    private Boolean isDigital = false;
 }

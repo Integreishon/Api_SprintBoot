@@ -2,8 +2,8 @@ package com.hospital.backend.user.service;
 
 import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.auth.repository.UserRepository;
-import com.hospital.backend.catalog.repository.DocumentTypeRepository;
 import com.hospital.backend.common.dto.PageResponse;
+import com.hospital.backend.common.exception.AccessDeniedException;
 import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.common.exception.ValidationException;
@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +26,8 @@ import java.time.Period;
 import java.util.Optional;
 
 /**
- * Servicio para la gestión de pacientes en el sistema hospitalario
+ * Servicio para la gestión de pacientes
+ * Adaptado a la nueva lógica de Urovital
  */
 @Service
 @RequiredArgsConstructor
@@ -36,7 +36,6 @@ import java.util.Optional;
 public class PatientService {
 
     private final PatientRepository patientRepository;
-    private final DocumentTypeRepository documentTypeRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     
@@ -54,8 +53,8 @@ public class PatientService {
     }
     
     @Transactional(readOnly = true)
-    public PatientResponse findByDocumentNumberAndDocumentType(String documentNumber, Long documentTypeId) {
-        return patientRepository.findByDocumentTypeIdAndDocumentNumber(documentTypeId, documentNumber)
+    public PatientResponse findByDocumentNumber(String documentNumber) {
+        return patientRepository.findByDocumentNumber(documentNumber)
                 .map(this::mapToPatientResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente", "documento", documentNumber));
     }
@@ -63,16 +62,11 @@ public class PatientService {
     public PatientResponse create(CreatePatientRequest request) {
         validateCreatePatientRequest(request);
         
-        var documentType = documentTypeRepository.findById(request.getDocumentTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Tipo de documento", "id", request.getDocumentTypeId()));
-        
-        // Verificar si ya existe un paciente con el mismo tipo y número de documento
-        Optional<Patient> existingPatient = patientRepository.findByDocumentTypeIdAndDocumentNumber(
-                request.getDocumentTypeId(),
-                request.getDocumentNumber());
+        // Verificar si ya existe un paciente con el mismo número de documento
+        Optional<Patient> existingPatient = patientRepository.findByDocumentNumber(request.getDocumentNumber());
         
         if (existingPatient.isPresent()) {
-            throw new BusinessException("Ya existe un paciente registrado con este tipo y número de documento");
+            throw new BusinessException("Ya existe un paciente registrado con este número de documento");
         }
         
         // Crear usuario
@@ -90,7 +84,6 @@ public class PatientService {
         patient.setLastName(request.getLastName());
         patient.setSecondLastName(request.getSecondLastName());
         patient.setDocumentNumber(request.getDocumentNumber());
-        patient.setDocumentType(documentType);
         patient.setBirthDate(request.getBirthDate());
         patient.setGender(request.getGender());
         patient.setBloodType(request.getBloodType());
@@ -99,7 +92,7 @@ public class PatientService {
         patient.setEmergencyContactName(request.getEmergencyContactName());
         patient.setEmergencyContactPhone(request.getEmergencyContactPhone());
         patient.setAllergies(request.getAllergies());
-        patient.setChronicConditions(request.getChronicConditions());
+        patient.setMedicalHistory(request.getMedicalHistory());
         
         Patient savedPatient = patientRepository.save(patient);
         log.info("Paciente creado con ID: {}", savedPatient.getId());
@@ -122,7 +115,7 @@ public class PatientService {
         patient.setEmergencyContactName(request.getEmergencyContactName());
         patient.setEmergencyContactPhone(request.getEmergencyContactPhone());
         patient.setAllergies(request.getAllergies());
-        patient.setChronicConditions(request.getChronicConditions());
+        patient.setMedicalHistory(request.getMedicalHistory());
         
         Patient updatedPatient = patientRepository.save(patient);
         log.info("Paciente actualizado con ID: {}", updatedPatient.getId());
@@ -196,11 +189,6 @@ public class PatientService {
         response.setLastName(patient.getLastName());
         response.setFullName(patient.getFirstName() + " " + patient.getLastName());
         response.setDocumentNumber(patient.getDocumentNumber());
-        
-        if (patient.getDocumentType() != null) {
-            response.setDocumentType(patient.getDocumentType().getName());
-        }
-        
         response.setBirthDate(patient.getBirthDate());
         
         // Calcular edad si la fecha de nacimiento está disponible
@@ -225,7 +213,7 @@ public class PatientService {
         response.setEmergencyContactName(patient.getEmergencyContactName());
         response.setEmergencyContactPhone(patient.getEmergencyContactPhone());
         response.setAllergies(patient.getAllergies());
-        response.setChronicConditions(patient.getChronicConditions());
+        response.setMedicalHistory(patient.getMedicalHistory());
         response.setCreatedAt(patient.getCreatedAt());
         response.setUpdatedAt(patient.getUpdatedAt());
         

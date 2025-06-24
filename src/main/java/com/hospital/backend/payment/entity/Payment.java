@@ -1,6 +1,7 @@
 package com.hospital.backend.payment.entity;
 
 import com.hospital.backend.appointment.entity.Appointment;
+import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.catalog.entity.PaymentMethod;
 import com.hospital.backend.common.entity.BaseEntity;
 import com.hospital.backend.enums.PaymentStatus;
@@ -14,7 +15,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entidad que representa un pago en el sistema hospitalario
+ * Entidad que representa un pago en el sistema
+ * IMPORTANTE: Solo se crea appointment cuando payment.status = COMPLETED
  */
 @Entity
 @Table(name = "payments")
@@ -49,7 +51,7 @@ public class Payment extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private PaymentStatus status = PaymentStatus.PENDING;
+    private PaymentStatus status = PaymentStatus.PROCESSING;
     
     @Column(name = "receipt_number", length = 50)
     private String receiptNumber;
@@ -59,6 +61,13 @@ public class Payment extends BaseEntity {
     
     @Column(name = "payer_email", length = 150)
     private String payerEmail;
+    
+    @Column(name = "requires_validation", nullable = false)
+    private Boolean requiresValidation = false;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "validated_by_user_id")
+    private User validatedByUser;
     
     // =========================
     // Métodos de negocio
@@ -79,10 +88,10 @@ public class Payment extends BaseEntity {
     }
     
     /**
-     * Verificar si el pago está pendiente
+     * Verificar si el pago está en proceso
      */
-    public boolean isPending() {
-        return this.status == PaymentStatus.PENDING;
+    public boolean isProcessing() {
+        return this.status == PaymentStatus.PROCESSING;
     }
     
     /**
@@ -95,7 +104,7 @@ public class Payment extends BaseEntity {
     /**
      * Marcar el pago como completado
      */
-    public void markAsPaid(String transactionReference) {
+    public void markAsCompleted(String transactionReference) {
         this.status = PaymentStatus.COMPLETED;
         this.paymentDate = LocalDateTime.now();
         this.transactionReference = transactionReference;
