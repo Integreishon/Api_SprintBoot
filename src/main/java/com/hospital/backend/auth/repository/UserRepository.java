@@ -30,8 +30,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                    @Param("isActive") Boolean isActive, 
                                    Pageable pageable);
     
+    @Query("SELECT u FROM User u JOIN Patient p ON u.id = p.user.id WHERE p.documentNumber = :documentNumber")
+    Optional<User> findByPatientDocumentNumber(@Param("documentNumber") String documentNumber);
+    
     long countByRole(UserRole role);
     
     long countByIsActive(Boolean isActive);
     
+    @Query("SELECT COUNT(u) FROM User u WHERE u.requiresActivation = true")
+    long countByRequiresActivation();
 }

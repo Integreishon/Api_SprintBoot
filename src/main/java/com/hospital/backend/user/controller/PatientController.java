@@ -75,6 +75,17 @@ public class PatientController {
                 .body(ApiResponse.success("Paciente creado exitosamente", createdPatient));
     }
     
+    @PostMapping("/reception")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+    @Operation(summary = "Crear paciente desde recepción", description = "Registra un nuevo paciente sin credenciales (presencial)")
+    public ResponseEntity<ApiResponse<PatientResponse>> createPatientWithoutCredentials(
+            @Valid @RequestBody CreatePatientRequest request) {
+        PatientResponse createdPatient = patientService.createWithoutCredentials(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Paciente presencial creado exitosamente", createdPatient));
+    }
+    
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') || @patientService.validateUserCanAccessPatient(#id, principal.id)")
     @Operation(summary = "Actualizar paciente", description = "Actualiza los datos de un paciente existente")

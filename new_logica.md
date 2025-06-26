@@ -1,85 +1,408 @@
-# Nueva Lógica del Sistema Hospital API
+🗄️ ESTRUCTURA FINAL COMPLETA (16 TABLAS)
+GRUPO 1: TABLAS SIN MODIFICACIONES (6 tablas)
+1. doctor_specialties
+ESTADO: Sin cambios
+CAMPOS:
 
-## Principios de Diseño
+id (BIGSERIAL PRIMARY KEY)
+doctor_id (BIGINT REFERENCES doctors(id))
+specialty_id (BIGINT REFERENCES specialties(id))
+is_primary (BOOLEAN DEFAULT FALSE)
+certification_date (DATE)
+created_at, updated_at (TIMESTAMP)
 
-La nueva arquitectura del sistema se basa en los siguientes principios:
+2. medical_attachments
+ESTADO: Sin cambios - incluye recetas subidas por pacientes
+CAMPOS:
 
-1. **Separación de Responsabilidades**
-   - Spring Boot: Operaciones de negocio y usuarios finales
-   - Django: Administración y análisis
+id (BIGSERIAL PRIMARY KEY)
+patient_id (BIGINT REFERENCES patients(id))
+medical_record_id (BIGINT REFERENCES medical_records(id))
+file_name (VARCHAR(255))
+file_path (VARCHAR(500))
+file_size (BIGINT)
+file_type (VARCHAR(20)) - PDF, IMAGE, DOCUMENT
+content_type (VARCHAR(100))
+upload_date (TIMESTAMP)
+upload_source (VARCHAR(20)) - DOCTOR, PATIENT, SYSTEM
+description (TEXT)
+is_public (BOOLEAN DEFAULT FALSE)
+created_at, updated_at (TIMESTAMP)
+created_by, updated_by (VARCHAR(100))
 
-2. **Base de Datos Compartida**
-   - Un solo esquema PostgreSQL
-   - Spring Boot define el esquema
-   - Django se adapta al esquema existente
+3. hospital_settings
+ESTADO: Sin cambios estructurales
+CAMPOS:
 
-3. **Optimización de Recursos**
-   - Eliminación de componentes redundantes
-   - Simplificación del modelo de datos
-   - Mejora de rendimiento en consultas críticas
+id (BIGSERIAL PRIMARY KEY)
+setting_key (VARCHAR(100) UNIQUE)
+setting_value (TEXT)
+data_type (VARCHAR(20)) - STRING, INTEGER, BOOLEAN, JSON
+description (VARCHAR(255))
+category (VARCHAR(100))
+is_public (BOOLEAN)
+is_editable (BOOLEAN)
+created_at, updated_at (TIMESTAMP)
+created_by, updated_by (VARCHAR(100))
 
-4. **Mejora de Experiencia de Usuario**
-   - API Spring Boot optimizada para aplicaciones cliente
-   - Panel Django optimizado para administradores
+4. chatbot_knowledge_base
+ESTADO: Sin cambios
+CAMPOS:
 
-## Cambios Principales en la Lógica de Negocio
+id (BIGSERIAL PRIMARY KEY)
+topic (VARCHAR(255))
+question (VARCHAR(500))
+answer (TEXT)
+keywords (VARCHAR(500))
+is_active (BOOLEAN DEFAULT TRUE)
+priority (INTEGER DEFAULT 5)
+category (VARCHAR(100))
+usage_count (INTEGER DEFAULT 0)
+success_rate (DECIMAL DEFAULT 0.0)
+created_at, updated_at (TIMESTAMP)
+created_by, updated_by (VARCHAR(100))
 
-### 1. Sistema de Notificaciones
+5. chatbot_conversations
+ESTADO: Sin cambios
+CAMPOS:
 
-- **Antes**: Almacenamiento en base de datos y procesamiento asíncrono
-- **Ahora**: Servicios externos directos sin almacenamiento persistente
-  - Email: Servicio SMTP directo
-  - SMS: API de proveedor externo
-  - Push: Firebase Cloud Messaging
+id (BIGSERIAL PRIMARY KEY)
+user_id (BIGINT REFERENCES users(id))
+session_id (VARCHAR(100))
+query (TEXT)
+response (TEXT)
+is_successful (BOOLEAN DEFAULT TRUE)
+feedback_rating (INTEGER)
+ip_address (VARCHAR(50))
+created_at, updated_at (TIMESTAMP)
 
-### 2. Gestión de Citas
+6. doctor_availability
+ESTADO: Concepto de bloques definido
+CAMPOS:
 
-- **Antes**: Basado en horas específicas (start_time, end_time)
-- **Ahora**: Basado en bloques de tiempo (MORNING, AFTERNOON)
-  - Simplifica la programación
-  - Reduce conflictos de horarios
-  - Mejora la experiencia del paciente
+id (BIGSERIAL PRIMARY KEY)
+doctor_id (BIGINT REFERENCES doctors(id))
+day_of_week (SMALLINT) - 1=lunes, 7=domingo
+time_block (VARCHAR(20)) - MORNING, AFTERNOON, FULL_DAY
+max_patients (INTEGER DEFAULT 20)
+is_available (BOOLEAN DEFAULT TRUE)
+created_at, updated_at (TIMESTAMP)
 
-### 3. Historiales Médicos
 
-- **Antes**: Sistema monolítico con prescripciones integradas
-- **Ahora**: Sistema modular con referencia a servicios externos
-  - Historiales médicos básicos en la base de datos
-  - Prescripciones y documentos en servicios especializados
+GRUPO 2: TABLAS CON MODIFICACIONES MENORES (7 tablas)
+7. users
+ESTADO: Simplificado según revisión
+CAMPOS:
 
-### 4. Pagos y Facturación
+id (BIGSERIAL PRIMARY KEY)
+email (VARCHAR(150) UNIQUE)
+password_hash (VARCHAR(255))
+role (VARCHAR(30)) - PATIENT, DOCTOR, SPECIALIST, RECEPTIONIST, ADMIN
+is_active (BOOLEAN DEFAULT TRUE)
+last_login (TIMESTAMP)
+created_at, updated_at (TIMESTAMP)
 
-- **Antes**: Sistema complejo con múltiples estados
-- **Ahora**: Sistema simplificado con validación manual opcional
-  - Estados reducidos (PROCESSING, COMPLETED, FAILED, REFUNDED)
-  - Soporte para pagos digitales y tradicionales
+ROLES FINALES:
 
-### 5. Autenticación y Seguridad
+PATIENT - Pacientes del centro
+DOCTOR - Dr. Mario (urólogo principal)
+SPECIALIST - Doctores bajo demanda
+RECEPTIONIST - Personal registro/pago
+ADMIN - Administradores
 
-- **Antes**: Sistemas independientes de autenticación
-- **Ahora**: Sistema unificado con JWT compartido
-  - Misma clave de firma JWT para ambas APIs
-  - Tokens intercambiables entre sistemas
+8. patients
+ESTADO: Simplificado - solo DNI directo
+CAMPOS:
 
-## Optimizaciones Técnicas
+id (BIGSERIAL PRIMARY KEY)
+user_id (BIGINT REFERENCES users(id))
+document_number (VARCHAR(12) UNIQUE) - Solo DNI (8 dígitos)
+first_name (VARCHAR(100))
+last_name (VARCHAR(100))
+second_last_name (VARCHAR(100))
+birth_date (DATE)
+gender (VARCHAR(10)) - MALE, FEMALE, OTHER
+blood_type (VARCHAR(10))
+phone (VARCHAR(20))
+address (TEXT)
+emergency_contact_name (VARCHAR(200))
+emergency_contact_phone (VARCHAR(20))
+allergies (TEXT)
+reniec_verified (BOOLEAN DEFAULT FALSE)
+created_at, updated_at (TIMESTAMP)
 
-1. **Caché**
-   - Eliminación de la tabla analytics_cache
-   - Uso de Redis para caché de aplicación
-   - Caché distribuido para alta disponibilidad
+9. doctors
+ESTADO: Categorización para modelo Urovital
+CAMPOS:
 
-2. **Consultas**
-   - Nuevos índices para consultas frecuentes
-   - Optimización de joins complejos
-   - Paginación eficiente
+id (BIGSERIAL PRIMARY KEY)
+user_id (BIGINT REFERENCES users(id))
+cmp_number (VARCHAR(15) UNIQUE)
+first_name (VARCHAR(100))
+last_name (VARCHAR(100))
+second_last_name (VARCHAR(100))
+phone (VARCHAR(20))
+consultation_room (VARCHAR(10))
+is_active (BOOLEAN DEFAULT TRUE)
+hire_date (DATE)
+profile_image (VARCHAR(255))
+doctor_type (VARCHAR(20) DEFAULT 'SPECIALIST') - PRIMARY, SPECIALIST
+is_external (BOOLEAN DEFAULT FALSE)
+can_refer (BOOLEAN DEFAULT FALSE)
+contact_phone (VARCHAR(20))
+created_at, updated_at (TIMESTAMP)
 
-3. **Transacciones**
-   - Aislamiento serializable para operaciones críticas
-   - Bloqueos optimistas para concurrencia
+10. specialties
+ESTADO: Categorización específica Urovital
+CAMPOS:
 
-## Impacto en el Desarrollo
+id (BIGSERIAL PRIMARY KEY)
+name (VARCHAR(100))
+description (TEXT)
+consultation_price (DECIMAL(10,2))
+discount_percentage (DECIMAL(5,2) DEFAULT 0.00)
+average_duration (INTEGER DEFAULT 30)
+is_active (BOOLEAN DEFAULT TRUE)
+is_primary (BOOLEAN DEFAULT FALSE) - Solo urología
+requires_referral (BOOLEAN DEFAULT FALSE) - Especialidades bajo demanda
+created_at, updated_at (TIMESTAMP)
 
-- Código más limpio y mantenible
-- Separación clara de responsabilidades
-- Facilita la escalabilidad horizontal
-- Mejora los tiempos de respuesta para usuarios finales
+11. payment_methods
+ESTADO: Métodos locales peruanos
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+name (VARCHAR(50)) - "Efectivo", "Yape", "Plin"
+type (VARCHAR(20)) - CASH, DIGITAL, CARD
+processing_fee (DECIMAL(5,2) DEFAULT 0.00)
+integration_code (VARCHAR(100))
+is_active (BOOLEAN DEFAULT TRUE)
+requires_manual_validation (BOOLEAN DEFAULT FALSE)
+is_digital (BOOLEAN DEFAULT FALSE)
+created_at, updated_at (TIMESTAMP)
+
+12. medical_records
+ESTADO: Mantiene campos para derivaciones
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+patient_id (BIGINT REFERENCES patients(id))
+doctor_id (BIGINT REFERENCES doctors(id))
+appointment_id (BIGINT REFERENCES appointments(id))
+record_date (TIMESTAMP)
+chief_complaint (TEXT)
+symptoms (TEXT)
+diagnosis (TEXT)
+treatment_plan (TEXT)
+notes (TEXT)
+followup_required (BOOLEAN DEFAULT FALSE)
+followup_date (TIMESTAMP)
+severity (VARCHAR(20)) - LOW, MEDIUM, HIGH, CRITICAL
+height_cm (DOUBLE PRECISION)
+weight_kg (DOUBLE PRECISION)
+blood_pressure (VARCHAR(20))
+temperature (DOUBLE PRECISION)
+heart_rate (INTEGER)
+respiratory_rate (INTEGER)
+oxygen_saturation (INTEGER)
+allergies (TEXT)
+is_referral_record (BOOLEAN DEFAULT FALSE)
+referral_notes (TEXT)
+created_at, updated_at (TIMESTAMP)
+created_by, updated_by (VARCHAR(100))
+
+13. audit_logs
+ESTADO: Campos simplificados
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+user_id (BIGINT)
+username (VARCHAR(100))
+operation_type (VARCHAR(20)) - CREATE, READ, UPDATE, DELETE, LOGIN
+entity_name (VARCHAR(100))
+entity_id (BIGINT)
+description (TEXT) - Generado automáticamente por backend
+request_url (VARCHAR(255))
+request_method (VARCHAR(10))
+old_value (TEXT)
+new_value (TEXT)
+status (BOOLEAN DEFAULT TRUE)
+error_message (TEXT)
+session_id (VARCHAR(100))
+created_at, updated_at (TIMESTAMP)
+
+
+GRUPO 3: TABLAS CON MODIFICACIONES IMPORTANTES (2 tablas)
+14. payments
+ESTADO: CRÍTICO - Estados simplificados para pago obligatorio
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+appointment_id (BIGINT UNIQUE REFERENCES appointments(id))
+payment_method_id (BIGINT REFERENCES payment_methods(id))
+amount (DECIMAL(10,2))
+processing_fee (DECIMAL(10,2))
+total_amount (DECIMAL(10,2))
+transaction_reference (VARCHAR(100))
+payment_date (TIMESTAMP)
+status (VARCHAR(20)) - SOLO: PROCESSING, COMPLETED, FAILED, REFUNDED
+receipt_number (VARCHAR(50))
+payer_name (VARCHAR(150))
+payer_email (VARCHAR(150))
+requires_validation (BOOLEAN DEFAULT FALSE)
+validated_by_user_id (BIGINT REFERENCES users(id))
+created_at, updated_at (TIMESTAMP)
+
+ESTADOS PAYMENT FINALES:
+
+PROCESSING - En proceso de validación (tarjeta/Yape/Plin)
+COMPLETED - Pago confirmado (appointment se crea automáticamente)
+FAILED - Pago falló (NO se crea appointment)
+REFUNDED - Devuelto por cancelación
+
+
+15. appointments
+ESTADO: RADICAL - Solo citas pagadas, estados simplificados
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+patient_id (BIGINT REFERENCES patients(id))
+doctor_id (BIGINT REFERENCES doctors(id))
+specialty_id (BIGINT REFERENCES specialties(id))
+appointment_date (DATE)
+time_block (VARCHAR(20)) - MORNING, AFTERNOON
+reason (TEXT)
+status (VARCHAR(20)) - SOLO: SCHEDULED, IN_CONSULTATION, COMPLETED, CANCELLED, NO_SHOW
+created_at, updated_at (TIMESTAMP)
+
+
+16. referrals
+ESTADO: Nueva tabla para derivaciones internas
+CAMPOS:
+
+id (BIGSERIAL PRIMARY KEY)
+patient_id (BIGINT REFERENCES patients(id))
+referring_doctor_id (BIGINT REFERENCES doctors(id))
+target_specialty_id (BIGINT REFERENCES specialties(id))
+original_appointment_id (BIGINT REFERENCES appointments(id)) - Cita que origina derivación
+new_appointment_id (BIGINT REFERENCES appointments(id)) - Cita creada con especialista
+reason (TEXT)
+status (VARCHAR(20)) - REQUESTED, SCHEDULED, COMPLETED, CANCELLED
+scheduled_at (TIMESTAMP) - Cuándo se programó con especialista
+created_at, updated_at (TIMESTAMP)
+
+ESTADOS REFERRAL:
+
+REQUESTED - Dr. Mario solicita especialista
+SCHEDULED - Recepcionista coordinó y agendó con especialista
+COMPLETED - Paciente fue atendido por especialista
+CANCELLED - Derivación cancelada
+
+
+🔄 FLUJO OPERACIONAL FINAL
+FLUJO 1: CITA ONLINE (WEB/MÓVIL) - PAGO OBLIGATORIO
+PROCESO ATÓMICO:
+1. Paciente selecciona: especialidad + fecha + bloque
+2. Sistema muestra precio automático (desde specialty.consultation_price)
+3. Paciente DEBE pagar inmediatamente:
+   - Yape/Plin: Sube comprobante → validates_manual_validation=true
+   - Tarjeta: Proceso automático → payment.status=COMPLETED
+4. Solo SI payment.status=COMPLETED:
+   - Se crea appointment con status=SCHEDULED
+   - Transacción atómica garantizada
+5. Si payment.status=FAILED:
+   - NO se crea appointment
+   - Usuario puede reintentar
+FLUJO 2: CITA PRESENCIAL - PAGO DIRECTO
+PROCESO INMEDIATO:
+1. Paciente llega → Recepcionista registra
+2. Selecciona bloque disponible
+3. Paciente paga inmediatamente (efectivo/Yape/Plin)
+4. Recepcionista marca payment.status=COMPLETED
+5. appointment se crea automáticamente con status=SCHEDULED
+6. Paciente entra a sala de espera
+FLUJO 3: DERIVACIÓN INTERNA
+PROCESO DE ESPECIALISTAS:
+1. Dr. Mario completa consulta → appointment.status=COMPLETED
+2. Si necesita especialista → Crea referral:
+   - original_appointment_id = cita actual
+   - target_specialty_id = especialidad requerida
+   - status = REQUESTED
+3. Recepcionista ve "Derivaciones Pendientes"
+4. Contacta especialista → Coordina fecha
+5. Crea nueva cita con especialista:
+   - appointment_type = REFERRAL
+   - Paciente DEBE pagar cuando venga
+6. Actualiza referral:
+   - new_appointment_id = nueva cita
+   - status = SCHEDULED
+
+🔗 RELACIONES Y VALIDACIONES CRÍTICAS
+VALIDACIÓN 1: NO APPOINTMENT SIN PAYMENT COMPLETED
+Constraint: appointment solo se crea si existe payment.status=COMPLETED
+Implementación: Transacción atómica en base de datos
+Trigger: Verificar payment antes de INSERT appointment
+VALIDACIÓN 2: CAPACIDAD ANTES DE PAGO
+Verificar doctor_availability.max_patients ANTES de procesar pago
+Si bloque lleno → Error antes del pago
+Si pago exitoso → appointment garantizado (capacidad reservada)
+VALIDACIÓN 3: PRECIO AUTOMÁTICO
+appointment.price se calcula desde specialty.consultation_price
+NO almacenar price en appointment (fuente única de verdad)
+Mostrar en frontend pero calcular dinámicamente
+VALIDACIÓN 4: RELACIÓN 1:1 PAYMENT-APPOINTMENT
+Cada payment.status=COMPLETED tiene exactamente un appointment
+Cada appointment tiene exactamente un payment.status=COMPLETED
+Constraint UNIQUE en ambas tablas
+
+📊 CONFIGURACIÓN INICIAL UROVITAL
+Especialidades:
+sqlUrología: is_primary=true, requires_referral=false, consultation_price=150.00
+Medicina Interna: is_primary=false, requires_referral=true, consultation_price=120.00
+Ginecología: is_primary=false, requires_referral=true, consultation_price=130.00
+Gastroenterología: is_primary=false, requires_referral=true, consultation_price=140.00
+Nefrología: is_primary=false, requires_referral=true, consultation_price=135.00
+Métodos de Pago:
+sqlEfectivo: type=CASH, requires_manual_validation=true, processing_fee=0.00
+Yape: type=DIGITAL, requires_manual_validation=true, processing_fee=0.00
+Plin: type=DIGITAL, requires_manual_validation=true, processing_fee=0.00
+Tarjeta Crédito: type=CARD, requires_manual_validation=false, processing_fee=3.50
+Tarjeta Débito: type=CARD, requires_manual_validation=false, processing_fee=2.00
+Doctores:
+sqlDr. Mario: doctor_type=PRIMARY, can_refer=true, is_external=false
+Dra. Milagros: doctor_type=SPECIALIST, can_refer=false, is_external=true
+Dra. Mayra: doctor_type=SPECIALIST, can_refer=false, is_external=true
+Hospital Settings:
+sqlmorning_block_start=07:00
+morning_block_end=13:00
+afternoon_block_start=16:00
+afternoon_block_end=20:00
+max_patients_morning=20
+max_patients_afternoon=25
+payment_required_before_consultation=true
+appointment_warning_message="Las citas se atienden por orden de llegada en el horario seleccionado"
+
+🎯 BENEFICIOS DEL ESQUEMA FINAL
+1. Simplicidad Operacional:
+
+✅ Solo citas pagadas existen en el sistema
+✅ No estados intermedios confusos
+✅ Flujo directo: Pago → Cita → Atención
+
+2. Integridad Garantizada:
+
+✅ Transacción atómica: Payment + Appointment juntos
+✅ No inconsistencias: Imposible tener cita sin pago
+✅ Capacidad controlada: Solo se reserva si pago exitoso
+
+3. Experiencia Clara:
+
+✅ Usuario web: Pago inmediato → Confirmación inmediata
+✅ Recepcionista: Ve solo citas 100% válidas
+✅ Doctor: Atiende solo pacientes pagados
+
+4. Mantenibilidad:
+
+✅ Lógica simple: Sin validaciones complejas de "¿ya pagó?"
+✅ Estados claros: SCHEDULED = Ya pagó y puede ser atendido
+✅ Auditoría clara: Cada acción tiene un propósito específico

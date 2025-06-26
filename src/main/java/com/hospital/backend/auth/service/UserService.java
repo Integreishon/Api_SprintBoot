@@ -31,6 +31,11 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", "email", email));
     }
     
+    public User findByPatientDocumentNumber(String documentNumber) {
+        return userRepository.findByPatientDocumentNumber(documentNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "documentNumber", documentNumber));
+    }
+    
     public Page<User> findAll(Pageable pageable) {
         return userRepository.findAll(pageable);
     }
@@ -50,8 +55,9 @@ public class UserService {
         user.setEmail(updatedUser.getEmail());
         user.setRole(updatedUser.getRole());
         user.setIsActive(updatedUser.getIsActive());
+        user.setRequiresActivation(updatedUser.getRequiresActivation());
         
-        log.info("Usuario {} actualizado", user.getEmail());
+        log.info("Usuario {} actualizado", user.getEmail() != null ? user.getEmail() : "sin email");
         return userRepository.save(user);
     }
     
@@ -59,14 +65,21 @@ public class UserService {
     public void changePassword(Long userId, String currentPassword, String newPassword) {
         User user = findById(userId);
         
-        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
-            throw new IllegalArgumentException("Contraseña actual incorrecta");
+        // Si el usuario no tiene contraseña (creado en recepción), no verificar la contraseña actual
+        if (user.getPasswordHash() != null) {
+            if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+                throw new IllegalArgumentException("Contraseña actual incorrecta");
+            }
         }
         
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // Si el usuario tenía requires_activation en true, actualizarlo a false
+        if (user.getRequiresActivation() != null && user.getRequiresActivation()) {
+            user.setRequiresActivation(false);
+        }
         userRepository.save(user);
         
-        log.info("Contraseña cambiada para usuario {}", user.getEmail());
+        log.info("Contraseña cambiada para usuario {}", user.getEmail() != null ? user.getEmail() : "sin email");
     }
     
     @Transactional
@@ -75,7 +88,7 @@ public class UserService {
         user.setIsActive(true);
         userRepository.save(user);
         
-        log.info("Usuario {} activado", user.getEmail());
+        log.info("Usuario {} activado", user.getEmail() != null ? user.getEmail() : "sin email");
     }
     
     @Transactional
@@ -84,7 +97,18 @@ public class UserService {
         user.setIsActive(false);
         userRepository.save(user);
         
-        log.info("Usuario {} desactivado", user.getEmail());
+        log.info("Usuario {} desactivado", user.getEmail() != null ? user.getEmail() : "sin email");
+    }
+    
+    @Transactional
+    public User createUserWithoutCredentials(UserRole role) {
+        User user = new User();
+        user.setRole(role);
+        user.setIsActive(true);
+        user.setRequiresActivation(true);
+        
+        log.info("Usuario creado sin credenciales con rol {}", role);
+        return userRepository.save(user);
     }
     
     public long countByRole(UserRole role) {
@@ -93,5 +117,9 @@ public class UserService {
     
     public long countActiveUsers() {
         return userRepository.countByIsActive(true);
+    }
+    
+    public long countUsersRequiringActivation() {
+        return userRepository.countByRequiresActivation();
     }
 }

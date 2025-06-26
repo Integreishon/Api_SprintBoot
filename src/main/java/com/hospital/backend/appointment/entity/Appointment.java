@@ -17,7 +17,7 @@ import java.time.LocalDate;
 
 /**
  * Entidad que representa una cita médica en el sistema
- * IMPORTANTE: Todas las citas requieren pago confirmado para ser creadas
+ * IMPORTANTE: Las citas pueden existir con diferentes estados de pago
  */
 @Entity
 @Table(name = "appointments")
@@ -55,7 +55,7 @@ public class Appointment extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
-    private PaymentStatus paymentStatus = PaymentStatus.COMPLETED; // Siempre pagada
+    private PaymentStatus paymentStatus = PaymentStatus.PROCESSING; // Cambiado de COMPLETED a PROCESSING
     
     // =========================
     // Métodos de negocio
@@ -85,6 +85,34 @@ public class Appointment extends BaseEntity {
     public boolean isPending() {
         return this.status == AppointmentStatus.SCHEDULED || 
                this.status == AppointmentStatus.IN_CONSULTATION;
+    }
+    
+    /**
+     * ¿El pago está completo?
+     */
+    public boolean isPaymentCompleted() {
+        return this.paymentStatus == PaymentStatus.COMPLETED;
+    }
+    
+    /**
+     * ¿El pago está en proceso?
+     */
+    public boolean isPaymentProcessing() {
+        return this.paymentStatus == PaymentStatus.PROCESSING;
+    }
+    
+    /**
+     * ¿El pago falló?
+     */
+    public boolean isPaymentFailed() {
+        return this.paymentStatus == PaymentStatus.FAILED;
+    }
+    
+    /**
+     * ¿El pago fue reembolsado?
+     */
+    public boolean isPaymentRefunded() {
+        return this.paymentStatus == PaymentStatus.REFUNDED;
     }
     
     /**

@@ -71,8 +71,20 @@ public class PatientService {
         
         // Crear usuario
         User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        
+        // Verificar si se proporcionaron credenciales (email y password)
+        boolean hasCredentials = request.getEmail() != null && !request.getEmail().isEmpty() && 
+                                request.getPassword() != null && !request.getPassword().isEmpty();
+        
+        if (hasCredentials) {
+            user.setEmail(request.getEmail());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            user.setRequiresActivation(false);
+        } else {
+            // Si no hay credenciales, marcar que requiere activación
+            user.setRequiresActivation(true);
+        }
+        
         user.setRole(UserRole.PATIENT);
         user.setIsActive(true);
         user = userRepository.save(user);
@@ -98,6 +110,16 @@ public class PatientService {
         log.info("Paciente creado con ID: {}", savedPatient.getId());
         
         return mapToPatientResponse(savedPatient);
+    }
+    
+    /**
+     * Crea un paciente sin credenciales (para registro en recepción)
+     */
+    public PatientResponse createWithoutCredentials(CreatePatientRequest request) {
+        // Asegurarse de que no haya credenciales
+        request.setEmail(null);
+        request.setPassword(null);
+        return create(request);
     }
     
     @Transactional

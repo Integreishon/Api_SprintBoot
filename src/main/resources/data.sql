@@ -28,13 +28,13 @@ VALUES
 -- ============================================================================
 -- USUARIOS DEL SISTEMA (users) - ROLES ACTUALIZADOS
 -- ============================================================================
-INSERT INTO users (email, password_hash, role, is_active, last_login, created_at, updated_at)
+INSERT INTO users (email, password_hash, role, is_active, requires_activation, last_login, created_at, updated_at)
 VALUES 
-    ('admin@urovital.pe', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFjZPiACmUNJnH6', 'ADMIN', true, NULL, NOW(), NOW()),
-    ('doctor.mario@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'DOCTOR', true, NULL, NOW(), NOW()),
-    ('dra.mayra@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SPECIALIST', true, NULL, NOW(), NOW()),
-    ('recepcion@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'RECEPTIONIST', true, NULL, NOW(), NOW()),
-    ('paciente@ejemplo.com', '$2a$12$qrQcKBpUkrb7Q8w6mUzyne4f1ZO5k8VehJUEC8aBUvdgfkSQKNHu.', 'PATIENT', true, NULL, NOW(), NOW());
+    ('admin@urovital.pe', '$2a$12$LVDE7mpSnK092Lj7vqmNs.LHDl0kCyJEfMuJy85Shlu/VJ5wmcjeC', 'ADMIN', true, false, NULL, NOW(), NOW()),
+    ('doctor.mario@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'DOCTOR', true, false, NULL, NOW(), NOW()),
+    ('dra.mayra@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SPECIALIST', true, false, NULL, NOW(), NOW()),
+    ('recepcion@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'RECEPTIONIST', true, false, NULL, NOW(), NOW()),
+    ('paciente@ejemplo.com', '$2a$12$qrQcKBpUkrb7Q8w6mUzyne4f1ZO5k8VehJUEC8aBUvdgfkSQKNHu.', 'PATIENT', true, false, NULL, NOW(), NOW());
 
 -- ============================================================================
 -- CONFIGURACIONES DEL HOSPITAL (hospital_settings)
@@ -73,7 +73,7 @@ VALUES
 -- DATOS DE PRUEBA PARA DESARROLLO
 -- ============================================================================
 
--- Paciente de prueba
+-- Paciente de prueba con cuenta
 INSERT INTO patients (
     user_id, document_number, first_name, last_name, second_last_name,
     birth_date, gender, phone, address, reniec_verified, created_at, updated_at
@@ -88,6 +88,31 @@ VALUES (
     'MALE',
     '912345678',
     'Av. Lima 123, Lima',
+    true,
+    NOW(),
+    NOW()
+);
+
+-- Ejemplo: Usuario sin credenciales (presencial)
+INSERT INTO users (email, password_hash, role, is_active, requires_activation, created_at, updated_at)
+VALUES 
+    (NULL, NULL, 'PATIENT', true, true, NOW(), NOW());
+
+-- Paciente presencial (sin credenciales)
+INSERT INTO patients (
+    user_id, document_number, first_name, last_name, second_last_name,
+    birth_date, gender, phone, address, reniec_verified, created_at, updated_at
+)
+VALUES (
+    (SELECT id FROM users WHERE email IS NULL AND requires_activation = true LIMIT 1), -- id del usuario paciente presencial
+    '98765432',
+    'María',
+    'Rodríguez',
+    'Gómez',
+    '1985-10-15',
+    'FEMALE',
+    '945678123',
+    'Jr. Los Pinos 456, Lima',
     true,
     NOW(),
     NOW()
