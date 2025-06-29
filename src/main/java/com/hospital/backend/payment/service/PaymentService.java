@@ -103,8 +103,13 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.COMPLETED);
         payment.setTransactionReference(transactionReference);
         
+        // Sincronizar estado con la cita
+        Appointment appointment = payment.getAppointment();
+        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
+        appointmentRepository.save(appointment);
+        
         Payment savedPayment = paymentRepository.save(payment);
-        log.info("Pago confirmado exitosamente");
+        log.info("Pago confirmado y estado de cita sincronizado exitosamente");
         
         return mapToPaymentResponse(savedPayment);
     }
@@ -125,9 +130,14 @@ public class PaymentService {
         
         // Actualizar pago
         payment.setStatus(PaymentStatus.FAILED);
+
+        // Sincronizar estado con la cita
+        Appointment appointment = payment.getAppointment();
+        appointment.setPaymentStatus(PaymentStatus.FAILED);
+        appointmentRepository.save(appointment);
         
         Payment savedPayment = paymentRepository.save(payment);
-        log.info("Pago marcado como fallido exitosamente");
+        log.info("Pago marcado como fallido y estado de cita sincronizado exitosamente");
         
         return mapToPaymentResponse(savedPayment);
     }
@@ -148,9 +158,14 @@ public class PaymentService {
         
         // Actualizar pago
         payment.setStatus(PaymentStatus.REFUNDED);
+
+        // Sincronizar estado con la cita
+        Appointment appointment = payment.getAppointment();
+        appointment.setPaymentStatus(PaymentStatus.REFUNDED);
+        appointmentRepository.save(appointment);
         
         Payment savedPayment = paymentRepository.save(payment);
-        log.info("Pago reembolsado exitosamente");
+        log.info("Pago reembolsado y estado de cita sincronizado exitosamente");
         
         return mapToPaymentResponse(savedPayment);
     }

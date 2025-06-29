@@ -97,7 +97,7 @@ public class MedicalRecordService {
                 .id(medicalRecord.getId())
                 .patientId(medicalRecord.getPatient().getId())
                 .patientName(medicalRecord.getPatient().getFirstName() + " " + medicalRecord.getPatient().getLastName())
-                .patientDocument(medicalRecord.getPatient().getDocumentNumber())
+                .patientDocument(medicalRecord.getPatient().getUser().getDni())
                 .patientAge(calculateAge(medicalRecord.getPatient().getBirthDate()))
                 .doctorId(medicalRecord.getDoctor().getId())
                 .doctorName(medicalRecord.getDoctor().getFirstName() + " " + medicalRecord.getDoctor().getLastName())

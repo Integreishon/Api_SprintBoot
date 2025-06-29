@@ -4,6 +4,7 @@ package com.hospital.backend.auth.entity;
 import com.hospital.backend.common.entity.BaseEntity;
 import com.hospital.backend.enums.UserRole;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -19,7 +20,8 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class User extends BaseEntity {
     
-    @Column(name = "dni", nullable = true, unique = true)
+	@Size(min = 8, max = 8, message = "El DNI debe tener exactamente 8 caracteres")
+	@Column(name = "dni", nullable = true, unique = true, length = 8)
     private String dni;
     
     @Column(name = "email", nullable = false, unique = true)

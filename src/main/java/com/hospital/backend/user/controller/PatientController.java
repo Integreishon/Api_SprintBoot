@@ -55,12 +55,12 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.success("Búsqueda completada", patients));
     }
     
-    @GetMapping("/document")
+    @GetMapping("/dni/{dni}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Buscar paciente por documento", description = "Busca un paciente por número de documento")
-    public ResponseEntity<ApiResponse<PatientResponse>> getPatientByDocument(
-            @RequestParam String documentNumber) {
-        PatientResponse patient = patientService.findByDocumentNumber(documentNumber);
+    @Operation(summary = "Buscar paciente por DNI", description = "Busca un paciente por su número de DNI")
+    public ResponseEntity<ApiResponse<PatientResponse>> getPatientByDni(
+            @PathVariable String dni) {
+        PatientResponse patient = patientService.findByDni(dni);
         return ResponseEntity.ok(ApiResponse.success("Paciente encontrado", patient));
     }
     
@@ -73,17 +73,6 @@ public class PatientController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Paciente creado exitosamente", createdPatient));
-    }
-    
-    @PostMapping("/reception")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-    @Operation(summary = "Crear paciente desde recepción", description = "Registra un nuevo paciente sin credenciales (presencial)")
-    public ResponseEntity<ApiResponse<PatientResponse>> createPatientWithoutCredentials(
-            @Valid @RequestBody CreatePatientRequest request) {
-        PatientResponse createdPatient = patientService.createWithoutCredentials(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Paciente presencial creado exitosamente", createdPatient));
     }
     
     @PutMapping("/{id}")

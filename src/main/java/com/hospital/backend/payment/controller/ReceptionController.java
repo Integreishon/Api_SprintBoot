@@ -76,17 +76,4 @@ public class ReceptionController {
         boolean result = receptionService.rejectPayment(paymentId, request.getReason());
         return ResponseEntity.ok(ApiResponse.success("Pago rechazado. El paciente será notificado.", result));
     }
-    
-    /**
-     * Marca un paciente como llegado al centro médico
-     * @param appointmentId ID de la cita
-     * @return Resultado de la operación
-     */
-    @Operation(summary = "Marcar paciente como llegado")
-    @PostMapping("/appointments/{appointmentId}/arrive")
-    public ResponseEntity<ApiResponse<Boolean>> markPatientAsArrived(@PathVariable Long appointmentId) {
-        log.info("POST /api/reception/appointments/{}/arrive - Marcando paciente como llegado", appointmentId);
-        boolean result = receptionService.markPatientAsArrived(appointmentId);
-        return ResponseEntity.ok(ApiResponse.success("Paciente marcado como llegado", result));
-    }
 } 

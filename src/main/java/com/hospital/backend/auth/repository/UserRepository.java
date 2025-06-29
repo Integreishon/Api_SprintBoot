@@ -17,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByEmail(String email);
     
+    Optional<User> findByDni(String dni);
+    
     Optional<User> findByEmailAndIsActive(String email, Boolean isActive);
     
     Optional<User> findByDniOrEmailAndIsActive(String dni, String email, Boolean isActive);
@@ -33,9 +35,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByRoleAndIsActive(@Param("role") UserRole role, 
                                    @Param("isActive") Boolean isActive, 
                                    Pageable pageable);
-    
-    @Query("SELECT u FROM User u JOIN Patient p ON u.id = p.user.id WHERE p.documentNumber = :documentNumber")
-    Optional<User> findByPatientDocumentNumber(@Param("documentNumber") String documentNumber);
     
     long countByRole(UserRole role);
     

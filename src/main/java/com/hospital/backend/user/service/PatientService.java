@@ -53,40 +53,33 @@ public class PatientService {
     }
     
     @Transactional(readOnly = true)
-    public PatientResponse findByDocumentNumber(String documentNumber) {
-        return patientRepository.findByDocumentNumber(documentNumber)
+    public PatientResponse findByDni(String dni) {
+        User user = userRepository.findByDni(dni)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "DNI", dni));
+        return patientRepository.findByUser(user)
                 .map(this::mapToPatientResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Paciente", "documento", documentNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente", "DNI", dni));
     }
     
     public PatientResponse create(CreatePatientRequest request) {
         validateCreatePatientRequest(request);
         
-        // Verificar si ya existe un paciente con el mismo número de documento
-        Optional<Patient> existingPatient = patientRepository.findByDocumentNumber(request.getDocumentNumber());
-        
-        if (existingPatient.isPresent()) {
-            throw new BusinessException("Ya existe un paciente registrado con este número de documento");
+        // Verificar si ya existe un usuario con el mismo DNI o email
+        if (userRepository.findByDni(request.getDni()).isPresent()) {
+            throw new BusinessException("Ya existe un usuario registrado con este DNI");
+        }
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BusinessException("Ya existe un usuario registrado con este email");
         }
         
         // Crear usuario
         User user = new User();
-        
-        // Verificar si se proporcionaron credenciales (email y password)
-        boolean hasCredentials = request.getEmail() != null && !request.getEmail().isEmpty() && 
-                                request.getPassword() != null && !request.getPassword().isEmpty();
-        
-        if (hasCredentials) {
-            user.setEmail(request.getEmail());
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-            user.setRequiresActivation(false);
-        } else {
-            // Si no hay credenciales, marcar que requiere activación
-            user.setRequiresActivation(true);
-        }
-        
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setDni(request.getDni());
         user.setRole(UserRole.PATIENT);
         user.setIsActive(true);
+        user.setRequiresActivation(false);
         user = userRepository.save(user);
         
         // Crear nuevo paciente
@@ -95,7 +88,6 @@ public class PatientService {
         patient.setFirstName(request.getFirstName());
         patient.setLastName(request.getLastName());
         patient.setSecondLastName(request.getSecondLastName());
-        patient.setDocumentNumber(request.getDocumentNumber());
         patient.setBirthDate(request.getBirthDate());
         patient.setGender(request.getGender());
         patient.setBloodType(request.getBloodType());
@@ -110,16 +102,6 @@ public class PatientService {
         log.info("Paciente creado con ID: {}", savedPatient.getId());
         
         return mapToPatientResponse(savedPatient);
-    }
-    
-    /**
-     * Crea un paciente sin credenciales (para registro en recepción)
-     */
-    public PatientResponse createWithoutCredentials(CreatePatientRequest request) {
-        // Asegurarse de que no haya credenciales
-        request.setEmail(null);
-        request.setPassword(null);
-        return create(request);
     }
     
     @Transactional
@@ -210,7 +192,6 @@ public class PatientService {
         response.setFirstName(patient.getFirstName());
         response.setLastName(patient.getLastName());
         response.setFullName(patient.getFirstName() + " " + patient.getLastName());
-        response.setDocumentNumber(patient.getDocumentNumber());
         response.setBirthDate(patient.getBirthDate());
         
         // Calcular edad si la fecha de nacimiento está disponible

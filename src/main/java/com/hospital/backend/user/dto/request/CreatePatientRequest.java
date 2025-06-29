@@ -29,9 +29,9 @@ public class CreatePatientRequest {
     @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres")
     private String password;
     
-    @NotBlank(message = "El número de documento es obligatorio")
+    @NotBlank(message = "El DNI es obligatorio")
     @Pattern(regexp = "^[0-9]{8}$", message = "El DNI debe tener 8 dígitos")
-    private String documentNumber;
+    private String dni;
     
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 100, message = "El nombre no puede exceder 100 caracteres")

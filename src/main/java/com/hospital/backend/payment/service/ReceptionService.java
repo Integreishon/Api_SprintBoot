@@ -91,26 +91,6 @@ public class ReceptionService {
     }
     
     /**
-     * Marca un paciente como llegado al centro médico
-     * @param appointmentId ID de la cita
-     * @return true si se marcó correctamente
-     */
-    @Transactional
-    public boolean markPatientAsArrived(Long appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new EntityNotFoundException("Cita no encontrada"));
-        
-        if (!appointment.isPaymentCompleted()) {
-            throw new IllegalStateException("No se puede marcar como llegado un paciente con pago pendiente");
-        }
-        
-        appointment.setArrivalTime(LocalDateTime.now());
-        appointmentRepository.save(appointment);
-        
-        return true;
-    }
-    
-    /**
      * Rechaza un pago pendiente
      * @param paymentId ID del pago a rechazar
      * @param reason Motivo del rechazo

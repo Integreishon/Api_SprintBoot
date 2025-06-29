@@ -24,8 +24,6 @@ public class PatientResponse {
     private Long id;
     private Long userId;
     private String email;
-    private String documentType;
-    private String documentNumber;
     private String firstName;
     private String lastName;
     private String secondLastName;

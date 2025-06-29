@@ -31,9 +31,9 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", "email", email));
     }
     
-    public User findByPatientDocumentNumber(String documentNumber) {
-        return userRepository.findByPatientDocumentNumber(documentNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "documentNumber", documentNumber));
+    public User findByDni(String dni) {
+        return userRepository.findByDni(dni)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "DNI", dni));
     }
     
     public Page<User> findAll(Pageable pageable) {

@@ -25,9 +25,6 @@ public class Patient extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
     
-    @Column(name = "document_number", nullable = false, unique = true, length = 12)
-    private String documentNumber; // Solo DNI (8 dígitos)
-    
     @Column(name = "first_name", nullable = false)
     private String firstName;
     

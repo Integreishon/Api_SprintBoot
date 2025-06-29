@@ -24,9 +24,7 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     
     Optional<Patient> findByUserEmail(String email);
     
-    Optional<Patient> findByDocumentNumber(String documentNumber);
-    
-    boolean existsByDocumentNumber(String documentNumber);
+    Optional<Patient> findByUser(com.hospital.backend.auth.entity.User user);
     
     boolean existsByUserEmail(String email);
     
@@ -40,9 +38,6 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
            "LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Patient> findByNameContaining(@Param("name") String name, Pageable pageable);
     
-    @Query("SELECT p FROM Patient p WHERE p.documentNumber LIKE %:documentNumber%")
-    Page<Patient> findByDocumentNumberContaining(@Param("documentNumber") String documentNumber, Pageable pageable);
-    
     Page<Patient> findByGender(Gender gender, Pageable pageable);
     
     @Query("SELECT p FROM Patient p WHERE p.birthDate BETWEEN :startDate AND :endDate")
@@ -50,12 +45,12 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
                                        @Param("endDate") LocalDate endDate, 
                                        Pageable pageable);
     
-    @Query("SELECT p FROM Patient p WHERE " +
+    @Query("SELECT p FROM Patient p JOIN p.user u WHERE " +
            "(:name IS NULL OR LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-           "(:documentNumber IS NULL OR p.documentNumber LIKE %:documentNumber%) AND " +
+           "(:dni IS NULL OR u.dni LIKE %:dni%) AND " +
            "(:gender IS NULL OR p.gender = :gender)")
     Page<Patient> findByFilters(@Param("name") String name,
-                              @Param("documentNumber") String documentNumber,
+                              @Param("dni") String dni,
                               @Param("gender") Gender gender,
                               Pageable pageable);
     

@@ -6,14 +6,14 @@
 -- ============================================================================
 -- ESPECIALIDADES MÉDICAS (specialties) - CONFIGURACIÓN UROVITAL
 -- ============================================================================
-INSERT INTO specialties (name, description, consultation_price, discount_percentage, average_duration, is_active, is_primary, requires_referral, created_at, updated_at)
+INSERT INTO specialties (name, description, consultation_price, discount_percentage, is_active, is_primary, requires_referral, created_at, updated_at)
 VALUES 
-    ('Urología', 'Especialidad principal del Centro Médico Urovital', 120.00, 0.00, 30, true, true, false, NOW(), NOW()),
-    ('Medicina Interna', 'Especialidad bajo demanda por derivación', 100.00, 0.00, 30, true, false, true, NOW(), NOW()),
-    ('Ginecología', 'Especialidad bajo demanda por derivación', 110.00, 0.00, 30, true, false, true, NOW(), NOW()),
-    ('Gastroenterología', 'Especialidad bajo demanda por derivación', 130.00, 0.00, 30, true, false, true, NOW(), NOW()),
-    ('Nefrología', 'Especialidad bajo demanda por derivación', 140.00, 0.00, 30, true, false, true, NOW(), NOW()),
-    ('Laboratorio', 'Servicios de análisis clínicos', 80.00, 0.00, 20, true, false, false, NOW(), NOW())
+    ('Urología', 'Especialidad principal del Centro Médico Urovital', 120.00, 0.00,  true, true, false, NOW(), NOW()),
+    ('Medicina Interna', 'Especialidad bajo demanda por derivación', 100.00, 0.00, true, false, true, NOW(), NOW()),
+    ('Ginecología', 'Especialidad bajo demanda por derivación', 110.00, 0.00,  true, false, true, NOW(), NOW()),
+    ('Gastroenterología', 'Especialidad bajo demanda por derivación', 130.00, 0.00,  true, false, true, NOW(), NOW()),
+    ('Nefrología', 'Especialidad bajo demanda por derivación', 140.00, 0.00,  true, false, true, NOW(), NOW()),
+    ('Laboratorio', 'Servicios de análisis clínicos', 80.00, 0.00,  true, false, false, NOW(), NOW())
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
@@ -28,15 +28,16 @@ VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
--- USUARIOS DEL SISTEMA (users) - ROLES ACTUALIZADOS
+-- USUARIOS DEL SISTEMA (users) - ROLES ACTUALIZADOS Y DNI
+-- Se añade DNI como campo obligatorio y único para cada usuario.
 -- ============================================================================
-INSERT INTO users (email, password_hash, role, is_active, requires_activation, last_login, created_at, updated_at)
+INSERT INTO users (dni, email, password_hash, role, is_active, requires_activation, last_login, created_at, updated_at)
 VALUES 
-    ('admin@urovital.pe', '$2a$12$LVDE7mpSnK092Lj7vqmNs.LHDl0kCyJEfMuJy85Shlu/VJ5wmcjeC', 'ADMIN', true, false, NULL, NOW(), NOW()),
-    ('doctor.mario@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'DOCTOR', true, false, NULL, NOW(), NOW()),
-    ('dra.mayra@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SPECIALIST', true, false, NULL, NOW(), NOW()),
-    ('recepcion@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'RECEPTIONIST', true, false, NULL, NOW(), NOW()),
-    ('paciente@ejemplo.com', '$2a$12$qrQcKBpUkrb7Q8w6mUzyne4f1ZO5k8VehJUEC8aBUvdgfkSQKNHu.', 'PATIENT', true, false, NULL, NOW(), NOW())
+    ('11111111', 'admin@urovital.pe', '$2a$12$1Pp6CzmW2bHksSa006JKt.rCZAr2ewzWLNiOUakgxuvp3j88Y2W9u', 'ADMIN', true, false, NULL, NOW(), NOW()),
+    ('22222222', 'doctor.mario@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'DOCTOR', true, false, NULL, NOW(), NOW()),
+    ('33333333', 'dra.mayra@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SPECIALIST', true, false, NULL, NOW(), NOW()),
+    ('44444444', 'recepcion@urovital.pe', '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'RECEPTIONIST', true, false, NULL, NOW(), NOW()),
+    ('87654321', 'paciente@ejemplo.com', '$2a$12$qrQcKBpUkrb7Q8w6mUzyne4f1ZO5k8VehJUEC8aBUvdgfkSQKNHu.', 'PATIENT', true, false, NULL, NOW(), NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================================
@@ -72,36 +73,36 @@ ON CONFLICT (question) DO NOTHING;
 
 -- ============================================================================
 -- DATOS DE PRUEBA PARA DESARROLLO
+-- Se elimina document_number de patients y se utiliza el user_id (único)
 -- ============================================================================
 
--- Paciente de prueba con cuenta
+-- Paciente de prueba con cuenta (document_number eliminado)
 INSERT INTO patients (
-    user_id, document_number, first_name, last_name, second_last_name,
+    user_id, first_name, last_name, second_last_name,
     birth_date, gender, phone, address, reniec_verified, created_at, updated_at
 )
 SELECT 
-    id, '87654321', 'Carlos', 'López', 'Mendoza', '1990-05-20', 'MALE', '912345678', 'Av. Lima 123, Lima', true, NOW(), NOW()
+    id, 'Carlos', 'López', 'Mendoza', '1990-05-20', 'MALE', '912345678', 'Av. Lima 123, Lima', true, NOW(), NOW()
 FROM users WHERE email = 'paciente@ejemplo.com'
-ON CONFLICT (document_number) DO NOTHING;
+ON CONFLICT (user_id) DO NOTHING;
 
 
--- Ejemplo: Usuario sin credenciales (presencial)
-INSERT INTO users (email, password_hash, role, is_active, requires_activation, created_at, updated_at)
-SELECT NULL, NULL, 'PATIENT', true, true, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM patients WHERE document_number = '98765432');
+-- Paciente presencial (sin credenciales) - Lógica adaptada a DNI en users
+-- 1. Crear usuario sin email pero con DNI, si no existe.
+INSERT INTO users (dni, email, password_hash, role, is_active, requires_activation, created_at, updated_at)
+SELECT '98765432', NULL, NULL, 'PATIENT', true, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE dni = '98765432')
+ON CONFLICT (dni) DO NOTHING;
 
-
--- Paciente presencial (sin credenciales)
--- Nota: Este bloque puede insertar múltiples pacientes si se ejecuta varias veces, ya que no hay un usuario único al que vincularlo.
--- Se asume la creación de un nuevo usuario anónimo para cada ejecución.
+-- 2. Crear el paciente y vincularlo al usuario recién creado por DNI.
 INSERT INTO patients (
-    user_id, document_number, first_name, last_name, second_last_name,
+    user_id, first_name, last_name, second_last_name,
     birth_date, gender, phone, address, reniec_verified, created_at, updated_at
 )
 SELECT
-    (SELECT id FROM users WHERE email IS NULL AND role = 'PATIENT' ORDER BY created_at DESC LIMIT 1),
-    '98765432', 'María', 'Rodríguez', 'Gómez', '1985-10-15', 'FEMALE', '945678123', 'Jr. Los Pinos 456, Lima', true, NOW(), NOW()
-ON CONFLICT (document_number) DO NOTHING;
+    (SELECT id FROM users WHERE dni = '98765432'),
+    'María', 'Rodríguez', 'Gómez', '1985-10-15', 'FEMALE', '945678123', 'Jr. Los Pinos 456, Lima', true, NOW(), NOW()
+ON CONFLICT (user_id) DO NOTHING;
 
 
 -- Dr. Mario (Urólogo principal)

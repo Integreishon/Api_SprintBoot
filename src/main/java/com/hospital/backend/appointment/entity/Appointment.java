@@ -59,13 +59,6 @@ public class Appointment extends BaseEntity {
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PROCESSING; // Cambiado de COMPLETED a PROCESSING
     
-    /**
-     * Hora de llegada real del paciente, registrada por la recepcionista
-     * Útil para métricas de tiempo de espera
-     */
-    @Column(name = "arrival_time")
-    private LocalDateTime arrivalTime;
-    
     // =========================
     // Métodos de negocio
     // =========================
@@ -130,12 +123,5 @@ public class Appointment extends BaseEntity {
      */
     public java.math.BigDecimal getPrice() {
         return this.specialty != null ? this.specialty.getFinalPrice() : null;
-    }
-    
-    /**
-     * ¿El paciente ya llegó al centro médico?
-     */
-    public boolean hasArrived() {
-        return this.arrivalTime != null;
     }
 }
