@@ -14,10 +14,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Entidad que representa una cita médica en el sistema
  * IMPORTANTE: Las citas pueden existir con diferentes estados de pago
+ * Todas las citas en este sistema son virtuales, ya que las presenciales se manejan en el sistema de Urovital
  */
 @Entity
 @Table(name = "appointments")
@@ -56,6 +58,13 @@ public class Appointment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PROCESSING; // Cambiado de COMPLETED a PROCESSING
+    
+    /**
+     * Hora de llegada real del paciente, registrada por la recepcionista
+     * Útil para métricas de tiempo de espera
+     */
+    @Column(name = "arrival_time")
+    private LocalDateTime arrivalTime;
     
     // =========================
     // Métodos de negocio
@@ -121,5 +130,12 @@ public class Appointment extends BaseEntity {
      */
     public java.math.BigDecimal getPrice() {
         return this.specialty != null ? this.specialty.getFinalPrice() : null;
+    }
+    
+    /**
+     * ¿El paciente ya llegó al centro médico?
+     */
+    public boolean hasArrived() {
+        return this.arrivalTime != null;
     }
 }

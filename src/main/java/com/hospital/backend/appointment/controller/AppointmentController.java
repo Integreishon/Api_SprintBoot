@@ -21,9 +21,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -34,7 +38,7 @@ import java.util.Map;
  * Adaptado a la nueva lógica de bloques de tiempo
  */
 @RestController
-@RequestMapping("/appointments")
+@RequestMapping("/api/appointments")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "📅 Citas Médicas", description = "Gestión completa de citas médicas: programación, confirmación, seguimiento y reportes.")
@@ -58,6 +62,55 @@ public class AppointmentController {
         
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Cita creada exitosamente", response));
+    }
+    
+    /**
+     * Crear una cita virtual (para pacientes del portal web)
+     */
+    @Operation(summary = "Crear cita virtual con pago pendiente")
+    @PostMapping("/virtual")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> createVirtualAppointment(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody CreateAppointmentRequest request) {
+        
+        log.info("POST /api/appointments/virtual - Creando nueva cita virtual");
+        AppointmentResponse response = appointmentService.createVirtualAppointment(userDetails, request);
+        
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Cita virtual creada exitosamente. Por favor, suba el comprobante de pago.", response));
+    }
+    
+    /**
+     * Subir comprobante de pago para una cita virtual
+     */
+    @Operation(summary = "Subir comprobante de pago")
+    @PostMapping(value = "/{appointmentId}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<ApiResponse<Boolean>> uploadPaymentReceipt(
+            @PathVariable Long appointmentId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        log.info("POST /api/appointments/{}/receipt - Subiendo comprobante de pago", appointmentId);
+        boolean result = appointmentService.uploadPaymentReceipt(appointmentId, file, userDetails);
+        
+        return ResponseEntity.ok(ApiResponse.success("Comprobante de pago subido exitosamente. Su cita será validada por nuestro personal.", result));
+    }
+    
+    /**
+     * Obtener mis citas (para pacientes del portal web)
+     */
+    @Operation(summary = "Obtener mis citas")
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getMyAppointments(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        log.info("GET /api/appointments/me - Obteniendo citas del paciente autenticado");
+        List<AppointmentResponse> response = appointmentService.getPatientAppointments(userDetails);
+        
+        return ResponseEntity.ok(ApiResponse.success("Citas obtenidas exitosamente", response));
     }
     
     @Operation(summary = "Obtener cita por ID")

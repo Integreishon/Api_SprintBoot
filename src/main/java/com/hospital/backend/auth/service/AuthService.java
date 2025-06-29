@@ -30,11 +30,12 @@ public class AuthService {
     
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailAndIsActive(request.getEmail(), true)
-                .orElseThrow(() -> new UnauthorizedException("Credenciales inválidas"));
+        String username = request.getUsername();
+        User user = userRepository.findByDniOrEmailAndIsActive(username, username, true)
+                .orElseThrow(() -> new UnauthorizedException("Credenciales inválidas o usuario inactivo."));
         
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new UnauthorizedException("Credenciales inválidas");
+            throw new UnauthorizedException("Credenciales inválidas.");
         }
         
         user.setLastLogin(DateUtils.nowInLima());
@@ -52,11 +53,12 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         validateRegisterRequest(request);
         
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("El email ya está registrado");
+        if (userRepository.existsByDniOrEmail(request.getDni(), request.getEmail())) {
+            throw new BusinessException("El DNI o email ya está registrado");
         }
         
         User user = new User();
+        user.setDni(request.getDni());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());

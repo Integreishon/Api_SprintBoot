@@ -1,0 +1,298 @@
+# 🏥 ANÁLISIS DE REQUERIMIENTOS - CENTRO MÉDICO UROVITAL
+
+## 📋 RESUMEN EJECUTIVO
+
+El Centro Médico Urovital E.I.R.L. es un centro médico especializado principalmente en **urología** con servicios complementarios. Requiere adaptaciones específicas en el sistema hospitalario para reflejar su modelo de negocio actual.
+
+---
+
+## 🔍 HALLAZGOS CLAVE DE LA ENTREVISTA
+
+### 1. **MODELO DE NEGOCIO ESPECÍFICO**
+- **Especialidad principal**: Urología (Dr. Mario como único urólogo permanente)
+- **Especialidades bajo demanda**: Medicina interna, ginecología, gastroenterología, nefrología, reumatología
+- **Servicios propios**: Laboratorio, ecografías, uroflujometrías, cistoscopias
+- **Proyecto futuro**: Farmacia (en proceso de habilitación DIGEMID)
+
+### 2. **HORARIOS DE OPERACIÓN**
+- **Horario partido**: 7:00 AM - 1:00 PM y 4:00 PM - 8:00 PM
+- **Atención diaria**: Lunes a sábado (según contexto)
+
+### 3. **SISTEMA DE CITAS ACTUAL**
+- **Sin agenda previa obligatoria**: Los pacientes pueden llegar directamente
+- **Orden de atención**: Por llegada (FIFO - First In, First Out)
+- **Pago previo obligatorio**: No se puede pasar con el doctor sin pagar
+- **Sistema actual**: Tienen software propio con integración RENIEC
+
+### 4. **PROCESO DE PAGO IDENTIFICADO**
+- **Métodos aceptados**: Efectivo, Yape, Plin, transferencia, Visa, crédito, depósito
+- **Costo consulta**: S/. 150.00
+- **Flujo**: Registro → Pago → Pase con doctor
+- **Integración RENIEC**: Automática por DNI
+
+### 5. **ESPECIALISTAS BAJO DEMANDA**
+- **Dra. Milagros Alvites Mudarra**: Medicina interna
+- **Dra. Mayra**: Ginecología (esposa del doctor principal)
+- **Gastroenterólogo**: Bajo llamado
+- **Nefróloga**: Bajo llamado
+- **Disponibilidad**: Solo cuando el urólogo principal los solicita
+
+---
+
+## 🎯 ADAPTACIONES REQUERIDAS AL SISTEMA
+
+### **A. MÓDULO DE ESPECIALIDADES**
+
+#### Especialidades Principales (Activas)
+```sql
+-- Especialidad principal siempre disponible
+INSERT INTO specialties (name, consultation_price, is_active, is_primary) VALUES
+('Urología', 150.00, true, true);
+
+-- Especialidades bajo demanda
+INSERT INTO specialties (name, is_active, is_on_demand) VALUES
+('Medicina Interna', true, true),
+('Ginecología', true, true),
+('Gastroenterología', true, true),
+('Nefrología', true, true),
+('Reumatología', true, true);
+```
+
+#### Modificaciones Entidad Specialty
+```java
+@Entity
+public class Specialty extends BaseEntity {
+    // ... campos existentes
+    
+    @Column(name = "is_primary")
+    private Boolean isPrimary = false; // Especialidad principal del centro
+    
+    @Column(name = "is_on_demand")
+    private Boolean isOnDemand = false; // Especialidad bajo demanda
+    
+    @Column(name = "requires_referral")
+    private Boolean requiresReferral = false; // Requiere derivación
+}
+```
+
+### **B. MÓDULO DE DOCTORES**
+
+#### Tipos de Doctores
+1. **Doctor Principal** (permanente)
+2. **Doctores Bajo Demanda** (por llamado)
+
+```java
+@Entity
+public class Doctor extends BaseEntity {
+    // ... campos existentes
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "availability_type")
+    private DoctorAvailabilityType availabilityType; // PERMANENT, ON_DEMAND
+    
+    @Column(name = "contact_phone")
+    private String contactPhone; // Para llamar a doctores bajo demanda
+    
+    @Column(name = "is_external")
+    private Boolean isExternal = false; // Doctor externo
+}
+
+enum DoctorAvailabilityType {
+    PERMANENT,     // Doctor permanente
+    ON_DEMAND,     // Doctor bajo demanda
+    SCHEDULED      // Doctor con horario fijo
+}
+```
+
+### **C. MÓDULO DE CITAS MODIFICADO**
+
+#### Sistema de Citas Walk-in + Programadas
+```java
+@Entity
+public class Appointment extends BaseEntity {
+    // ... campos existentes
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "appointment_type")
+    private AppointmentType appointmentType; // WALK_IN, SCHEDULED, ON_DEMAND
+    
+    @Column(name = "arrival_time")
+    private LocalDateTime arrivalTime; // Hora de llegada real
+    
+    @Column(name = "queue_number")
+    private Integer queueNumber; // Número en cola
+    
+    @Column(name = "referral_from_doctor_id")
+    private Long referralFromDoctorId; // Derivación desde doctor principal
+}
+
+enum AppointmentType {
+    WALK_IN,      // Paciente llega directamente
+    SCHEDULED,    // Cita programada
+    ON_DEMAND,    // Cita con especialista bajo demanda
+    REFERRAL      // Derivación interna
+}
+```
+
+### **D. SERVICIOS ADICIONALES**
+
+#### Entidad para Servicios del Centro
+```java
+@Entity
+@Table(name = "medical_services")
+public class MedicalService extends BaseEntity {
+    @Column(name = "service_name", nullable = false)
+    private String serviceName;
+    
+    @Column(name = "service_type")
+    @Enumerated(EnumType.STRING)
+    private ServiceType serviceType; // LABORATORY, IMAGING, PROCEDURE
+    
+    @Column(name = "base_price")
+    private BigDecimal basePrice;
+    
+    @Column(name = "is_available")
+    private Boolean isAvailable = true;
+    
+    @Column(name = "requires_doctor_order")
+    private Boolean requiresDoctorOrder = false;
+}
+
+enum ServiceType {
+    LABORATORY,      // Laboratorio
+    IMAGING,         // Ecografías
+    PROCEDURE,       // Uroflujometría, Cistoscopia
+    CONSULTATION,    // Consultas
+    PHARMACY         // Farmacia (futuro)
+}
+```
+
+### **E. MÓDULO DE COLA/TURNOS**
+
+#### Sistema de Cola para Walk-ins
+```java
+@Entity
+@Table(name = "appointment_queue")
+public class AppointmentQueue extends BaseEntity {
+    @ManyToOne
+    @JoinColumn(name = "patient_id")
+    private Patient patient;
+    
+    @ManyToOne
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctor;
+    
+    @Column(name = "queue_date")
+    private LocalDate queueDate;
+    
+    @Column(name = "queue_number")
+    private Integer queueNumber;
+    
+    @Column(name = "estimated_time")
+    private LocalTime estimatedTime;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private QueueStatus status; // WAITING, CALLED, IN_PROGRESS, COMPLETED
+}
+```
+
+---
+
+## 🔄 FLUJOS DE PROCESO ADAPTADOS
+
+### **1. FLUJO PACIENTE WALK-IN (Principal)**
+```
+Paciente llega → Registro/Verificación RENIEC → Pago obligatorio → 
+Asignación número de cola → Espera → Llamado → Consulta → 
+Posible derivación a especialista
+```
+
+### **2. FLUJO ESPECIALISTA BAJO DEMANDA**
+```
+Doctor principal evalúa → Solicita especialista → Personal contacta especialista → 
+Agenda cita → Paciente programa nueva cita → Especialista viene → Consulta
+```
+
+### **3. FLUJO SERVICIOS AUXILIARES**
+```
+Orden médica → Pago servicio → Realización (lab/eco) → 
+Entrega de resultados → Seguimiento con doctor
+```
+
+---
+
+## ⚡ FUNCIONALIDADES PRIORITARIAS
+
+### **ALTA PRIORIDAD**
+1. **Sistema de cola en tiempo real** para walk-ins
+2. **Integración RENIEC** para registro automático
+3. **Múltiples métodos de pago** (especialmente Yape/Plin)
+4. **Gestión de especialistas bajo demanda**
+5. **Facturación inmediata** con boletas
+
+### **MEDIA PRIORIDAD**
+1. **Módulo de laboratorio** con tipos de exámenes específicos
+2. **Gestión de servicios de imagenología**
+3. **Sistema de derivaciones internas**
+4. **Dashboard para personal administrativo**
+
+### **BAJA PRIORIDAD**
+1. **Módulo de farmacia** (proyecto futuro)
+2. **Telemedicina** (no requerido actualmente)
+3. **Historiales clínicos complejos** (sistema actual funciona)
+
+---
+
+## 🎨 INTERFACES REQUERIDAS
+
+### **Para Personal Administrativo**
+- **Dashboard de cola en tiempo real**
+- **Registro rápido con RENIEC**
+- **Procesamiento de pagos múltiples**
+- **Gestión de turnos y llamados**
+
+### **Para Doctores**
+- **Lista de pacientes en espera**
+- **Solicitud de especialistas**
+- **Órdenes de laboratorio/imágenes**
+- **Acceso a historiales básicos**
+
+### **Para Pacientes (Opcional)**
+- **Consulta de posición en cola**
+- **Pre-registro desde casa**
+- **Consulta de resultados**
+
+---
+
+## 🔧 CONFIGURACIONES ESPECÍFICAS
+
+### **Centro Médico Settings**
+```java
+// Configuraciones específicas del centro
+hospital.name=Centro Médico Urovital E.I.R.L.
+hospital.ruc=20xxxxxxxxx
+hospital.primary_specialty=Urología
+hospital.operating_hours=07:00-13:00,16:00-20:00
+hospital.walk_in_enabled=true
+hospital.advance_booking_required=false
+hospital.payment_before_consultation=true
+hospital.reniec_integration=true
+```
+
+### **Horarios Especiales**
+- **Horario partido**: Configurar dos bloques diarios
+- **Sin citas nocturnas**: Limitar horarios
+- **Especialistas flexibles**: Horarios variables según disponibilidad
+
+---
+
+## 📊 MÉTRICAS IMPORTANTES
+
+1. **Tiempo promedio de espera** por paciente walk-in
+2. **Número de pacientes atendidos** por día/semana
+3. **Utilización de especialistas** bajo demanda
+4. **Ingresos por tipo de servicio**
+5. **Satisfacción del paciente** con tiempos de espera
+
+Este análisis debe servir como base para adaptar el sistema hospitalario actual a las necesidades reales del Centro Médico Urovital, manteniendo la flexibilidad para futuras expansiones.

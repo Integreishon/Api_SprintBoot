@@ -12,6 +12,11 @@ import lombok.Data;
 @Data
 public class RegisterRequest {
     
+    @NotBlank(message = "El DNI es requerido")
+    @Size(min = 8, max = 8, message = "El DNI debe tener 8 dígitos")
+    @Pattern(regexp = "^[0-9]{8}$", message = "El DNI debe contener solo 8 dígitos numéricos")
+    private String dni;
+    
     @NotBlank(message = "El email es requerido")
     @Email(message = "El email debe tener un formato válido")
     private String email;

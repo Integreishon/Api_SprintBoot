@@ -77,6 +77,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     Page<Appointment> findByPatientId(@Param("patientId") Long patientId, Pageable pageable);
     
     /**
+     * Buscar citas por paciente ordenadas por fecha descendente
+     * Usado en el portal virtual para mostrar el historial de citas al paciente
+     */
+    List<Appointment> findByPatientIdOrderByAppointmentDateDesc(Long patientId);
+    
+    /**
      * Buscar citas por doctor
      */
     @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId ORDER BY a.appointmentDate ASC")

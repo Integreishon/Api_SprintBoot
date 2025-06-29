@@ -11,7 +11,8 @@ import java.time.LocalDate;
 
 @Data
 @Entity
-@Table(name = "doctor_specialties")
+@Table(name = "doctor_specialties",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"doctor_id", "specialty_id"}))
 @EqualsAndHashCode(callSuper = true)
 public class DoctorSpecialty extends BaseEntity {
     
@@ -28,7 +29,4 @@ public class DoctorSpecialty extends BaseEntity {
     
     @Column(name = "certification_date")
     private LocalDate certificationDate;
-    
-    @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"doctor_id", "specialty_id"}))
-    public static class DoctorSpecialtyConstraints {}
 }

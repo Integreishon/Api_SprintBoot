@@ -24,7 +24,7 @@ import java.math.RoundingMode;
 @AllArgsConstructor
 public class Specialty extends BaseEntity {
 
-    @Column(name = "name", length = 100, nullable = false)
+    @Column(name = "name", length = 100, nullable = false, unique = true)
     private String name;
     
     @Column(name = "description", columnDefinition = "TEXT")

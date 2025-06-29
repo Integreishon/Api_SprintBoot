@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
 
 /**
  * Entidad que representa un pago en el sistema
- * IMPORTANTE: Solo se crea appointment cuando payment.status = COMPLETED
+ * IMPORTANTE: En el flujo virtual, primero se crea appointment y payment con status=PROCESSING
+ * La recepcionista valida el comprobante de pago y cambia el estado a COMPLETED
  */
 @Entity
 @Table(name = "payments")
@@ -61,6 +62,13 @@ public class Payment extends BaseEntity {
     
     @Column(name = "payer_email", length = 150)
     private String payerEmail;
+    
+    /**
+     * Ruta del archivo del comprobante de pago subido por el paciente
+     * Será validado por la recepcionista en el portal de validación
+     */
+    @Column(name = "receipt_image_path", length = 500)
+    private String receiptImagePath;
     
     @Column(name = "requires_validation", nullable = false)
     private Boolean requiresValidation = false;
@@ -133,5 +141,20 @@ public class Payment extends BaseEntity {
             BigDecimal fee = processingFee != null ? processingFee : BigDecimal.ZERO;
             this.totalAmount = amount.add(fee);
         }
+    }
+    
+    /**
+     * ¿El comprobante de pago ha sido subido?
+     */
+    public boolean hasReceiptImage() {
+        return this.receiptImagePath != null && !this.receiptImagePath.isEmpty();
+    }
+    
+    /**
+     * ¿El pago está listo para validación?
+     * Debe estar en PROCESSING y tener un comprobante subido
+     */
+    public boolean isReadyForValidation() {
+        return this.isProcessing() && this.hasReceiptImage();
     }
 }

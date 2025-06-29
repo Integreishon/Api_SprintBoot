@@ -64,6 +64,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      */
     Long countByStatus(PaymentStatus status);
     
+    /**
+     * Buscar pagos por estado que tengan comprobante subido
+     * Usado en el portal de validación de recepción
+     */
+    List<Payment> findByStatusAndReceiptImagePathIsNotNull(PaymentStatus status);
+    
     // =========================
     // Consultas por fechas
     // =========================

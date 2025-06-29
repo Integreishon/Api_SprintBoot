@@ -36,25 +36,40 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Autenticación pública
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/auth/**").permitAll()
                 
                 // Catálogos públicos
+                .requestMatchers("/api/document-types/**").permitAll()
+                .requestMatchers("/api/specialties/**").permitAll()
+                .requestMatchers("/api/payment-methods/**").permitAll()
                 .requestMatchers("/document-types/**").permitAll()
                 .requestMatchers("/specialties/**").permitAll()
                 .requestMatchers("/payment-methods/**").permitAll()
                 
                 // Chatbot público
+                .requestMatchers("/api/chatbot/**").permitAll()
                 .requestMatchers("/chatbot/**").permitAll()
                 
-                // Swagger UI y documentación
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
-                .requestMatchers("/v3/api-docs/swagger-config").permitAll()
-                .requestMatchers("/swagger-resources/**").permitAll()
-                .requestMatchers("/webjars/**").permitAll()
+                // Portal Virtual - Rutas específicas
+                .requestMatchers("/api/appointments/virtual").hasRole("PATIENT")
+                .requestMatchers("/api/appointments/me").hasRole("PATIENT")
+                .requestMatchers("/api/appointments/*/receipt").hasRole("PATIENT")
+                .requestMatchers("/api/reception/**").hasRole("RECEPTIONIST")
+                
+                // Swagger UI y documentación - CORREGIDO PARA FUNCIONAR CON CONTEXT-PATH
+                .requestMatchers(
+                    "/api/swagger-ui/**", "/api/swagger-ui.html",
+                    "/api/v3/api-docs/**", "/api/v3/api-docs/swagger-config"
+                ).permitAll()
+                .requestMatchers(
+                    "/swagger-ui/**", "/swagger-ui.html",
+                    "/v3/api-docs/**", "/v3/api-docs/swagger-config",
+                    "/swagger-resources/**", "/webjars/**"
+                ).permitAll()
                 
                 // Actuator para monitoreo
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/**", "/api/actuator/**").permitAll()
                 
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()

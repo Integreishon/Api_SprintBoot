@@ -19,10 +19,13 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class User extends BaseEntity {
     
-    @Column(name = "email", nullable = true, unique = true)
+    @Column(name = "dni", nullable = true, unique = true)
+    private String dni;
+    
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
     
-    @Column(name = "password_hash", nullable = true)
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
     
     @Enumerated(EnumType.STRING)

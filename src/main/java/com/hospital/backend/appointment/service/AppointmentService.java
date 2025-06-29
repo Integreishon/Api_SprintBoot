@@ -6,7 +6,11 @@ import com.hospital.backend.appointment.dto.response.AppointmentResponse;
 import com.hospital.backend.appointment.dto.response.AppointmentSummaryResponse;
 import com.hospital.backend.appointment.entity.Appointment;
 import com.hospital.backend.appointment.repository.AppointmentRepository;
+import com.hospital.backend.auth.entity.User;
+import com.hospital.backend.auth.repository.UserRepository;
+import com.hospital.backend.catalog.entity.PaymentMethod;
 import com.hospital.backend.catalog.entity.Specialty;
+import com.hospital.backend.catalog.repository.PaymentMethodRepository;
 import com.hospital.backend.catalog.repository.SpecialtyRepository;
 import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.BusinessException;
@@ -14,27 +18,40 @@ import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.enums.TimeBlock;
+import com.hospital.backend.payment.entity.Payment;
+import com.hospital.backend.payment.repository.PaymentRepository;
 import com.hospital.backend.user.entity.Doctor;
 import com.hospital.backend.user.entity.Patient;
 import com.hospital.backend.user.repository.DoctorRepository;
 import com.hospital.backend.user.repository.PatientRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * Servicio para la gestión de citas médicas
- * Adaptado a la nueva lógica con bloques de tiempo y pago obligatorio
+ * Adaptado a la nueva lógica con bloques de tiempo y pago pendiente para el portal virtual
  */
 @Service
 @RequiredArgsConstructor
@@ -45,7 +62,13 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final SpecialtyRepository specialtyRepository;
+    private final PaymentRepository paymentRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
+    private final UserRepository userRepository;
     private final AvailabilityService availabilityService;
+    
+    @Value("${app.uploads.payment-receipts:uploads/receipts}")
+    private String paymentReceiptsPath;
     
     // =========================
     // CRUD Operations
@@ -54,6 +77,7 @@ public class AppointmentService {
     /**
      * Crear una nueva cita médica
      * NOTA: Según nueva lógica, solo se crea con pago confirmado
+     * Este método es para uso interno/administrativo
      */
     @Transactional
     public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
@@ -97,6 +121,154 @@ public class AppointmentService {
         log.info("Cita creada exitosamente con ID: {}", savedAppointment.getId());
         
         return mapToResponse(savedAppointment);
+    }
+    
+    /**
+     * Crear una nueva cita virtual con pago pendiente
+     * Este método es usado por los pacientes a través del portal web
+     */
+    @Transactional
+    public AppointmentResponse createVirtualAppointment(UserDetails userDetails, CreateAppointmentRequest request) {
+        log.info("Creando nueva cita virtual para usuario: {}, fecha: {}", 
+                userDetails.getUsername(), request.getAppointmentDate());
+        
+        // 1. Obtener el usuario y verificar que tiene un paciente asociado
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        
+        Patient patient = patientRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException("El usuario no tiene un perfil de paciente asociado"));
+        
+        // 2. Obtener doctor y especialidad
+        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
+        
+        Specialty specialty = specialtyRepository.findById(request.getSpecialtyId())
+                .orElseThrow(() -> new ResourceNotFoundException("Specialty", "id", request.getSpecialtyId()));
+        
+        // 3. Validar que el doctor tenga esa especialidad
+        validateDoctorSpecialty(doctor, specialty);
+        
+        // 4. Validar disponibilidad del doctor (por bloque)
+        validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), request.getTimeBlock());
+        
+        // 5. Validar si la especialidad requiere derivación
+        if (specialty.getRequiresReferral() != null && specialty.getRequiresReferral() 
+                && (request.getReferralId() == null)) {
+            throw new BusinessException("Esta especialidad requiere derivación médica");
+        }
+        
+        // 6. Obtener método de pago (por defecto Yape para citas virtuales)
+        PaymentMethod paymentMethod = paymentMethodRepository.findByName("Yape")
+                .orElseThrow(() -> new EntityNotFoundException("Método de pago Yape no encontrado"));
+        
+        // 7. Crear la cita con estado de pago PROCESSING
+        Appointment appointment = new Appointment();
+        appointment.setPatient(patient);
+        appointment.setDoctor(doctor);
+        appointment.setSpecialty(specialty);
+        appointment.setAppointmentDate(request.getAppointmentDate());
+        appointment.setTimeBlock(request.getTimeBlock());
+        appointment.setReason(request.getReason());
+        appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setPaymentStatus(PaymentStatus.PROCESSING); // Pago pendiente
+        
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        log.info("Cita virtual creada exitosamente con ID: {}", savedAppointment.getId());
+        
+        // 8. Crear el pago asociado
+        Payment payment = new Payment();
+        payment.setAppointment(savedAppointment);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setAmount(specialty.getConsultationPrice());
+        payment.setProcessingFee(paymentMethod.getProcessingFee());
+        payment.calculateTotalAmount();
+        payment.setStatus(PaymentStatus.PROCESSING);
+        payment.setRequiresValidation(true);
+        payment.setPayerName(patient.getFirstName() + " " + patient.getLastName());
+        payment.setPayerEmail(user.getEmail());
+        
+        paymentRepository.save(payment);
+        log.info("Pago pendiente creado para la cita virtual ID: {}", savedAppointment.getId());
+        
+        return mapToResponse(savedAppointment);
+    }
+    
+    /**
+     * Subir comprobante de pago para una cita virtual
+     */
+    @Transactional
+    public boolean uploadPaymentReceipt(Long appointmentId, MultipartFile file, UserDetails userDetails) {
+        log.info("Subiendo comprobante de pago para cita ID: {}", appointmentId);
+        
+        // 1. Verificar que el usuario es el propietario de la cita
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        
+        Patient patient = patientRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException("El usuario no tiene un perfil de paciente asociado"));
+        
+        // 2. Buscar la cita y verificar que está pendiente de pago
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
+        
+        if (!appointment.getPatient().getId().equals(patient.getId())) {
+            throw new BusinessException("No tienes permiso para subir un comprobante para esta cita");
+        }
+        
+        if (appointment.getPaymentStatus() != PaymentStatus.PROCESSING) {
+            throw new BusinessException("Solo se pueden subir comprobantes para citas con pago pendiente");
+        }
+        
+        // 3. Buscar el pago asociado
+        Payment payment = paymentRepository.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "appointmentId", appointmentId));
+        
+        // 4. Guardar el archivo
+        try {
+            // Crear directorio si no existe
+            Path uploadPath = Paths.get(paymentReceiptsPath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            
+            // Generar nombre único para el archivo
+            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            Path filePath = uploadPath.resolve(filename);
+            
+            // Guardar el archivo
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            
+            // Actualizar la ruta en el pago
+            payment.setReceiptImagePath(filePath.toString());
+            paymentRepository.save(payment);
+            
+            log.info("Comprobante subido exitosamente para la cita ID: {}", appointmentId);
+            return true;
+        } catch (IOException e) {
+            log.error("Error al guardar el comprobante de pago", e);
+            throw new BusinessException("No se pudo guardar el comprobante de pago: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Obtener citas del paciente autenticado
+     */
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getPatientAppointments(UserDetails userDetails) {
+        log.info("Obteniendo citas del paciente: {}", userDetails.getUsername());
+        
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        
+        Patient patient = patientRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException("El usuario no tiene un perfil de paciente asociado"));
+        
+        List<Appointment> appointments = appointmentRepository.findByPatientIdOrderByAppointmentDateDesc(patient.getId());
+        
+        return appointments.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
     
     /**
