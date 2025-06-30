@@ -21,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -29,12 +30,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
-    
+
+    // Lista de rutas a excluir del filtro JWT
+    private static final List<String> EXCLUDED_PATHS = List.of(
+        "/api/auth/",
+        "/auth/",
+        "/api/patients/register",
+        "/patients/register",
+        "/swagger-ui",
+        "/v3/api-docs"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, 
                                   HttpServletResponse response, 
                                   FilterChain filterChain) throws ServletException, IOException {
         
+        final String requestURI = request.getRequestURI();
+
+        // Si la ruta está en la lista de exclusión, saltar el filtro
+        if (isExcluded(requestURI)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             String jwt = getJwtFromRequest(request);
             
@@ -97,6 +116,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         
         return null;
+    }
+    
+    private boolean isExcluded(String requestURI) {
+        return EXCLUDED_PATHS.stream().anyMatch(requestURI::startsWith);
     }
     
     /**

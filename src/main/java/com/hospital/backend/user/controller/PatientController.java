@@ -75,6 +75,16 @@ public class PatientController {
                 .body(ApiResponse.success("Paciente creado exitosamente", createdPatient));
     }
     
+    @PostMapping("/register")
+    @Operation(summary = "Registro público de paciente", description = "Permite a un usuario registrarse como paciente sin autenticación previa")
+    public ResponseEntity<ApiResponse<PatientResponse>> registerPatient(
+            @Valid @RequestBody CreatePatientRequest request) {
+        PatientResponse createdPatient = patientService.create(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Registro exitoso", createdPatient));
+    }
+    
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') || @patientService.validateUserCanAccessPatient(#id, principal.id)")
     @Operation(summary = "Actualizar paciente", description = "Actualiza los datos de un paciente existente")

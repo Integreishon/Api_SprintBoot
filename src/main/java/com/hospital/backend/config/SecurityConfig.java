@@ -39,6 +39,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/auth/**").permitAll()
                 
+                // Registro público de pacientes
+                .requestMatchers("/api/patients/register").permitAll()
+                .requestMatchers("/patients/register").permitAll()
+                
                 // Catálogos públicos
                 .requestMatchers("/api/document-types/**").permitAll()
                 .requestMatchers("/api/specialties/**").permitAll()

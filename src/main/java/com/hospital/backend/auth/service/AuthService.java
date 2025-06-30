@@ -30,8 +30,8 @@ public class AuthService {
     
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        String username = request.getUsername();
-        User user = userRepository.findByDniOrEmailAndIsActive(username, username, true)
+        String dni = request.getDni();
+        User user = userRepository.findByDniAndIsActive(dni, true)
                 .orElseThrow(() -> new UnauthorizedException("Credenciales inválidas o usuario inactivo."));
         
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {

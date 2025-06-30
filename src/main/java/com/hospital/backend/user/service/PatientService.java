@@ -80,7 +80,8 @@ public class PatientService {
         user.setRole(UserRole.PATIENT);
         user.setIsActive(true);
         user.setRequiresActivation(false);
-        user = userRepository.save(user);
+        // Forzar la escritura del usuario en la BD para obtener el ID antes de crear el paciente
+        user = userRepository.saveAndFlush(user);
         
         // Crear nuevo paciente
         Patient patient = new Patient();
@@ -97,6 +98,7 @@ public class PatientService {
         patient.setEmergencyContactPhone(request.getEmergencyContactPhone());
         patient.setAllergies(request.getAllergies());
         patient.setMedicalHistory(request.getMedicalHistory());
+        patient.setReniecVerified(false);
         
         Patient savedPatient = patientRepository.save(patient);
         log.info("Paciente creado con ID: {}", savedPatient.getId());
