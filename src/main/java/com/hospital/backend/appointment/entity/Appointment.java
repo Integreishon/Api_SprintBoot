@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entidad que representa una cita médica en el sistema
@@ -65,10 +64,11 @@ public class Appointment extends BaseEntity {
     
     /**
      * ¿Se puede cancelar?
-     * Solo si está programada o en consulta.
+     * Solo si está pendiente de validación, programada o en consulta.
      */
     public boolean canCancel() {
-        return this.status == AppointmentStatus.SCHEDULED || 
+        return this.status == AppointmentStatus.PENDING_VALIDATION ||
+               this.status == AppointmentStatus.SCHEDULED || 
                this.status == AppointmentStatus.IN_CONSULTATION;
     }
     
@@ -82,10 +82,11 @@ public class Appointment extends BaseEntity {
     
     /**
      * ¿La cita está pendiente?
-     * Programada o en consulta.
+     * Pendiente de validación, programada o en consulta.
      */
     public boolean isPending() {
-        return this.status == AppointmentStatus.SCHEDULED || 
+        return this.status == AppointmentStatus.PENDING_VALIDATION ||
+               this.status == AppointmentStatus.SCHEDULED || 
                this.status == AppointmentStatus.IN_CONSULTATION;
     }
     

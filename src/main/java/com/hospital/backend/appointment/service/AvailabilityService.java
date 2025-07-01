@@ -34,52 +34,61 @@ public class AvailabilityService {
     private final AppointmentRepository appointmentRepository;
     
     /**
-     * Obtener bloques disponibles para un doctor en una fecha específica
+     * Obtener bloques disponibles para un doctor en una fecha específica.
+     * Versión final y corregida: se basa en los horarios explícitos del doctor para un día,
+     * ignorando FULL_DAY y garantizando coherencia con la base de datos.
      */
     @Transactional(readOnly = true)
     public List<BlockAvailabilityResponse> getAvailableBlocks(Long doctorId, LocalDate date) {
-        log.info("Calculando bloques disponibles para doctor: {}, fecha: {}", doctorId, date);
-        
-        // Validar que el doctor existe
+        log.info("Calculando disponibilidad estricta (sin FULL_DAY) para doctor: {}, fecha: {}", doctorId, date);
+
         if (!doctorRepository.existsById(doctorId)) {
             throw new ResourceNotFoundException("Doctor", "id", doctorId);
         }
-        
-        // Obtener la configuración de horarios del doctor para el día de la semana
+
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         int dayNumber = dayOfWeek.getValue(); // 1=Lunes, 7=Domingo
-        
-        List<DoctorAvailability> doctorSchedules = doctorAvailabilityRepository
-                .findByDoctorIdAndDayOfWeekAndIsAvailable(doctorId, dayNumber, true);
-        
-        if (doctorSchedules.isEmpty()) {
-            log.info("Doctor {} no trabaja los {}", doctorId, dayOfWeek);
-            return new ArrayList<>();
+
+        // 1. Obtener TODOS los horarios configurados para el doctor en ese día de la semana.
+        List<DoctorAvailability> allSchedulesForDay = doctorAvailabilityRepository.findByDoctorIdAndDayOfWeek(doctorId, dayNumber);
+
+        List<BlockAvailabilityResponse> responseBlocks = new ArrayList<>();
+        List<TimeBlock> blocksToCheck = List.of(TimeBlock.MORNING, TimeBlock.AFTERNOON);
+
+        for (TimeBlock block : blocksToCheck) {
+            // 2. Buscar en la lista obtenida si existe una entrada para el bloque actual (MORNING o AFTERNOON).
+            DoctorAvailability schedule = allSchedulesForDay.stream()
+                    .filter(s -> s.getTimeBlock() == block && s.getIsAvailable()) // Solo considerar si está disponible.
+                    .findFirst()
+                    .orElse(null);
+
+            if (schedule != null) {
+                // 3. Si se encuentra un horario y está marcado como disponible, verificar los cupos.
+                int maxPatients = schedule.getMaxPatients();
+                long appointmentsCount = appointmentRepository.countByDoctorIdAndAppointmentDateAndTimeBlock(
+                        doctorId, date, block);
+                boolean hasCapacity = appointmentsCount < maxPatients;
+
+                responseBlocks.add(BlockAvailabilityResponse.builder()
+                        .timeBlock(block)
+                        .isAvailable(hasCapacity)
+                        .maxPatients(maxPatients)
+                        .currentPatients((int) appointmentsCount)
+                        .remainingSlots(maxPatients - (int) appointmentsCount)
+                        .build());
+            } else {
+                // 4. Si no se encuentra un horario para este bloque, no está disponible.
+                responseBlocks.add(BlockAvailabilityResponse.builder()
+                        .timeBlock(block)
+                        .isAvailable(false)
+                        .maxPatients(0)
+                        .currentPatients(0)
+                        .remainingSlots(0)
+                        .build());
+            }
         }
-        
-        List<BlockAvailabilityResponse> availableBlocks = new ArrayList<>();
-        
-        // Para cada bloque de trabajo del doctor
-        for (DoctorAvailability schedule : doctorSchedules) {
-            TimeBlock timeBlock = schedule.getTimeBlock();
-            int maxPatients = schedule.getMaxPatients();
-            
-            // Contar cuántas citas ya hay en este bloque
-            long appointmentsCount = appointmentRepository.countByDoctorIdAndAppointmentDateAndTimeBlock(
-                    doctorId, date, timeBlock);
-            
-            boolean hasCapacity = appointmentsCount < maxPatients;
-            
-            availableBlocks.add(BlockAvailabilityResponse.builder()
-                    .timeBlock(timeBlock)
-                    .isAvailable(hasCapacity)
-                    .maxPatients(maxPatients)
-                    .currentPatients((int) appointmentsCount)
-                    .remainingSlots(maxPatients - (int) appointmentsCount)
-                    .build());
-        }
-        
-        return availableBlocks;
+
+        return responseBlocks;
     }
     
     /**

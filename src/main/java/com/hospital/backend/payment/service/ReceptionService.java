@@ -4,6 +4,7 @@ import com.hospital.backend.appointment.entity.Appointment;
 import com.hospital.backend.appointment.repository.AppointmentRepository;
 import com.hospital.backend.auth.entity.User;
 import com.hospital.backend.auth.repository.UserRepository;
+import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.dto.response.PendingValidationResponse;
 import com.hospital.backend.payment.entity.Payment;
@@ -85,6 +86,12 @@ public class ReceptionService {
         // Actualizar la cita
         Appointment appointment = payment.getAppointment();
         appointment.setPaymentStatus(PaymentStatus.COMPLETED);
+        
+        // Cambiar el estado de la cita de PENDING_VALIDATION a SCHEDULED
+        if (appointment.getStatus() == AppointmentStatus.PENDING_VALIDATION) {
+            appointment.setStatus(AppointmentStatus.SCHEDULED);
+        }
+        
         appointmentRepository.save(appointment);
         
         return true;

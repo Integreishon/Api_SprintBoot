@@ -24,8 +24,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
+import com.hospital.backend.auth.entity.User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,7 +38,7 @@ import java.util.Map;
  * Adaptado a la nueva lógica de bloques de tiempo
  */
 @RestController
-@RequestMapping("/api/appointments")
+@RequestMapping("/appointments")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "📅 Citas Médicas", description = "Gestión completa de citas médicas: programación, confirmación, seguimiento y reportes.")
@@ -55,30 +55,18 @@ public class AppointmentController {
     @PostMapping
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(
+            Authentication authentication,
             @Valid @RequestBody CreateAppointmentRequest request) {
         
-        log.info("POST /api/appointments - Creando nueva cita");
-        AppointmentResponse response = appointmentService.createAppointment(request);
+        // Se obtiene el email del usuario de forma segura desde el objeto Authentication
+        User user = (User) authentication.getPrincipal();
+        String userEmail = user.getEmail();
+
+        log.info("POST /api/appointments - Creando nueva cita para el usuario {}", userEmail);
+        AppointmentResponse response = appointmentService.createAppointment(userEmail, request);
         
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Cita creada exitosamente", response));
-    }
-    
-    /**
-     * Crear una cita virtual (para pacientes del portal web)
-     */
-    @Operation(summary = "Crear cita virtual con pago pendiente")
-    @PostMapping("/virtual")
-    @PreAuthorize("hasRole('PATIENT')")
-    public ResponseEntity<ApiResponse<AppointmentResponse>> createVirtualAppointment(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody CreateAppointmentRequest request) {
-        
-        log.info("POST /api/appointments/virtual - Creando nueva cita virtual");
-        AppointmentResponse response = appointmentService.createVirtualAppointment(userDetails, request);
-        
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Cita virtual creada exitosamente. Por favor, suba el comprobante de pago.", response));
     }
     
     /**
@@ -90,10 +78,14 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<Boolean>> uploadPaymentReceipt(
             @PathVariable Long appointmentId,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            Authentication authentication) {
         
-        log.info("POST /api/appointments/{}/receipt - Subiendo comprobante de pago", appointmentId);
-        boolean result = appointmentService.uploadPaymentReceipt(appointmentId, file, userDetails);
+        // Se obtiene el email del usuario de forma segura desde el objeto Authentication
+        User user = (User) authentication.getPrincipal();
+        String userEmail = user.getEmail();
+
+        log.info("POST /api/appointments/{}/receipt - Subiendo comprobante de pago para el usuario {}", appointmentId, userEmail);
+        boolean result = appointmentService.uploadPaymentReceipt(appointmentId, file, userEmail);
         
         return ResponseEntity.ok(ApiResponse.success("Comprobante de pago subido exitosamente. Su cita será validada por nuestro personal.", result));
     }
@@ -105,10 +97,14 @@ public class AppointmentController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getMyAppointments(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            Authentication authentication) {
         
-        log.info("GET /api/appointments/me - Obteniendo citas del paciente autenticado");
-        List<AppointmentResponse> response = appointmentService.getPatientAppointments(userDetails);
+        // Se obtiene el email del usuario de forma segura desde el objeto Authentication
+        User user = (User) authentication.getPrincipal();
+        String userEmail = user.getEmail();
+
+        log.info("GET /api/appointments/me - Obteniendo citas del paciente autenticado {}", userEmail);
+        List<AppointmentResponse> response = appointmentService.getPatientAppointments(userEmail);
         
         return ResponseEntity.ok(ApiResponse.success("Citas obtenidas exitosamente", response));
     }

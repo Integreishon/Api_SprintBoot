@@ -6,6 +6,7 @@ package com.hospital.backend.enums;
  * NOTA: Todas las citas requieren pago confirmado para ser creadas
  */
 public enum AppointmentStatus {
+    PENDING_VALIDATION("Pendiente de validación"),
     SCHEDULED("Programada"), // Solo existe si ya está pagada
     IN_CONSULTATION("En consulta"),
     COMPLETED("Completada"),

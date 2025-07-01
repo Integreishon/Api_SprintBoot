@@ -5,6 +5,36 @@
       "type": "com.hospital.backend.config.JwtProperties",
       "sourceType": "com.hospital.backend.config.JwtProperties",
       "description": "JWT configuration properties for Hospital API authentication"
+    },
+    {
+      "name": "app.appointment",
+      "type": "com.hospital.backend.config.AppointmentProperties",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties",
+      "description": "Configuration properties for appointments"
+    },
+    {
+      "name": "app.specialty",
+      "type": "com.hospital.backend.config.SpecialtyProperties",
+      "sourceType": "com.hospital.backend.config.SpecialtyProperties",
+      "description": "Configuration properties for specialties"
+    },
+    {
+      "name": "app.payment",
+      "type": "com.hospital.backend.config.PaymentProperties",
+      "sourceType": "com.hospital.backend.config.PaymentProperties",
+      "description": "Configuration properties for payments"
+    },
+    {
+      "name": "app.upload",
+      "type": "com.hospital.backend.config.UploadProperties",
+      "sourceType": "com.hospital.backend.config.UploadProperties",
+      "description": "Configuration properties for file uploads"
+    },
+    {
+      "name": "security",
+      "type": "com.hospital.backend.config.SecurityProperties",
+      "sourceType": "com.hospital.backend.config.SecurityProperties",
+      "description": "Configuration properties for security"
     }
   ],
   "properties": [
@@ -46,6 +76,100 @@
       "sourceType": "com.hospital.backend.config.JwtProperties",
       "sourceMethod": "getHeaderName()",
       "defaultValue": "Authorization"
+    },
+    {
+      "name": "app.appointment.morning.start",
+      "type": "java.lang.String",
+      "description": "Start time for morning appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getStart()"
+    },
+    {
+      "name": "app.appointment.morning.end",
+      "type": "java.lang.String",
+      "description": "End time for morning appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getEnd()"
+    },
+    {
+      "name": "app.appointment.morning.capacity",
+      "type": "java.lang.Integer",
+      "description": "Capacity for morning appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getCapacity()"
+    },
+    {
+      "name": "app.appointment.afternoon.start",
+      "type": "java.lang.String",
+      "description": "Start time for afternoon appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getStart()"
+    },
+    {
+      "name": "app.appointment.afternoon.end",
+      "type": "java.lang.String",
+      "description": "End time for afternoon appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getEnd()"
+    },
+    {
+      "name": "app.appointment.afternoon.capacity",
+      "type": "java.lang.Integer",
+      "description": "Capacity for afternoon appointments",
+      "sourceType": "com.hospital.backend.config.AppointmentProperties$TimeBlock",
+      "sourceMethod": "getCapacity()"
+    },
+    {
+      "name": "app.specialty.primary",
+      "type": "java.lang.Long",
+      "description": "Default ID for primary care specialty",
+      "sourceType": "com.hospital.backend.config.SpecialtyProperties",
+      "sourceMethod": "getPrimary()"
+    },
+    {
+      "name": "app.specialty.referral",
+      "type": "java.lang.Long",
+      "description": "Default ID for referral specialty",
+      "sourceType": "com.hospital.backend.config.SpecialtyProperties",
+      "sourceMethod": "getReferral()"
+    },
+    {
+      "name": "app.payment.validation-required",
+      "type": "java.lang.Boolean",
+      "description": "Whether payment validation is required",
+      "sourceType": "com.hospital.backend.config.PaymentProperties",
+      "sourceMethod": "getValidationRequired()",
+      "defaultValue": true
+    },
+    {
+      "name": "app.payment.timeout-minutes",
+      "type": "java.lang.Integer",
+      "description": "Payment timeout in minutes",
+      "sourceType": "com.hospital.backend.config.PaymentProperties",
+      "sourceMethod": "getTimeoutMinutes()",
+      "defaultValue": 30
+    },
+    {
+      "name": "app.upload.directory",
+      "type": "java.lang.String",
+      "description": "Base directory for uploads",
+      "sourceType": "com.hospital.backend.config.UploadProperties",
+      "sourceMethod": "getDirectory()",
+      "defaultValue": "uploads"
+    },
+    {
+      "name": "security.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key for JWT signing",
+      "sourceType": "com.hospital.backend.config.SecurityProperties$Jwt",
+      "sourceMethod": "getSecret()"
+    },
+    {
+      "name": "security.jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Expiration time in milliseconds",
+      "sourceType": "com.hospital.backend.config.SecurityProperties$Jwt",
+      "sourceMethod": "getExpiration()"
     }
   ],
   "hints": [

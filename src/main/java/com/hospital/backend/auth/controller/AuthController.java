@@ -117,12 +117,18 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new com.hospital.backend.common.exception.UnauthorizedException("Token no válido o expirado");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof User)) {
+            // Si el principal no es un objeto User, el token es inválido o el estado es anómalo.
+             throw new com.hospital.backend.common.exception.UnauthorizedException("Token inválido o sesión corrupta");
         }
         
         // Obtener el usuario del contexto de seguridad
-        User user = (User) authentication.getPrincipal();
+        User user = (User) principal;
         
         Map<String, Object> validation = new HashMap<>();
         validation.put("valid", true);

@@ -33,9 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // Lista de rutas a excluir del filtro JWT
     private static final List<String> EXCLUDED_PATHS = List.of(
-        "/api/auth/",
         "/auth/",
-        "/api/patients/register",
         "/patients/register",
         "/swagger-ui",
         "/v3/api-docs"

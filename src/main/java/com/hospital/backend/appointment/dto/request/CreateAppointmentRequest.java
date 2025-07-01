@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
@@ -19,19 +21,18 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class CreateAppointmentRequest {
-    
-    @NotNull(message = "El ID del paciente es obligatorio")
-    private Long patientId;
-    
-    @NotNull(message = "El ID de la especialidad es obligatorio")
-    private Long specialtyId;
     
     @NotNull(message = "El ID del doctor es obligatorio")
     private Long doctorId;
     
+    @NotNull(message = "El ID de la especialidad es obligatorio")
+    private Long specialtyId;
+    
     @NotNull(message = "La fecha de la cita es obligatoria")
-    @FutureOrPresent(message = "La fecha de la cita debe ser hoy o en el futuro")
+    @FutureOrPresent(message = "La fecha de la cita no puede ser en el pasado")
     private LocalDate appointmentDate;
     
     @NotNull(message = "El bloque de tiempo es obligatorio")

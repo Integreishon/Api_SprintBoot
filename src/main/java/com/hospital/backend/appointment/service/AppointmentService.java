@@ -36,15 +36,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -75,71 +71,22 @@ public class AppointmentService {
     // =========================
     
     /**
-     * Crear una nueva cita médica
-     * NOTA: Según nueva lógica, solo se crea con pago confirmado
-     * Este método es para uso interno/administrativo
+     * Crea una nueva cita médica para el usuario autenticado.
+     * Este es el único método para crear citas.
      */
     @Transactional
-    public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
-        log.info("Creando nueva cita para paciente: {}, doctor: {}, fecha: {}", 
-                request.getPatientId(), request.getDoctorId(), request.getAppointmentDate());
+    public AppointmentResponse createAppointment(String userEmail, CreateAppointmentRequest request) {
+        log.info("Creando nueva cita para usuario: {}, doctor: {}, fecha: {}", 
+                userEmail, request.getDoctorId(), request.getAppointmentDate());
         
-        // 1. Validar que las entidades existan
-        Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Patient", "id", request.getPatientId()));
-        
-        Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
-        
-        Specialty specialty = specialtyRepository.findById(request.getSpecialtyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Specialty", "id", request.getSpecialtyId()));
-        
-        // 2. Validar que el doctor tenga esa especialidad
-        validateDoctorSpecialty(doctor, specialty);
-        
-        // 3. Validar disponibilidad del doctor (por bloque)
-        validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), request.getTimeBlock());
-        
-        // 4. Validar si la especialidad requiere derivación
-        if (specialty.getRequiresReferral() != null && specialty.getRequiresReferral() 
-                && (request.getReferralId() == null)) {
-            throw new BusinessException("Esta especialidad requiere derivación médica");
-        }
-        
-        // 5. Crear la cita (siempre con pago confirmado)
-        Appointment appointment = new Appointment();
-        appointment.setPatient(patient);
-        appointment.setDoctor(doctor);
-        appointment.setSpecialty(specialty);
-        appointment.setAppointmentDate(request.getAppointmentDate());
-        appointment.setTimeBlock(request.getTimeBlock());
-        appointment.setReason(request.getReason());
-        appointment.setStatus(AppointmentStatus.SCHEDULED);
-        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
-        
-        Appointment savedAppointment = appointmentRepository.save(appointment);
-        log.info("Cita creada exitosamente con ID: {}", savedAppointment.getId());
-        
-        return mapToResponse(savedAppointment);
-    }
-    
-    /**
-     * Crear una nueva cita virtual con pago pendiente
-     * Este método es usado por los pacientes a través del portal web
-     */
-    @Transactional
-    public AppointmentResponse createVirtualAppointment(UserDetails userDetails, CreateAppointmentRequest request) {
-        log.info("Creando nueva cita virtual para usuario: {}, fecha: {}", 
-                userDetails.getUsername(), request.getAppointmentDate());
-        
-        // 1. Obtener el usuario y verificar que tiene un paciente asociado
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        // 1. Obtener el usuario y el paciente asociado
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con email: " + userEmail));
         
         Patient patient = patientRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException("El usuario no tiene un perfil de paciente asociado"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un perfil de paciente para el usuario con id: " + user.getId()));
         
-        // 2. Obtener doctor y especialidad
+        // 2. Validar que las demás entidades existan
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
         
@@ -149,7 +96,7 @@ public class AppointmentService {
         // 3. Validar que el doctor tenga esa especialidad
         validateDoctorSpecialty(doctor, specialty);
         
-        // 4. Validar disponibilidad del doctor (por bloque)
+        // 4. Validar disponibilidad del doctor
         validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), request.getTimeBlock());
         
         // 5. Validar si la especialidad requiere derivación
@@ -158,11 +105,7 @@ public class AppointmentService {
             throw new BusinessException("Esta especialidad requiere derivación médica");
         }
         
-        // 6. Obtener método de pago (por defecto Yape para citas virtuales)
-        PaymentMethod paymentMethod = paymentMethodRepository.findByName("Yape")
-                .orElseThrow(() -> new EntityNotFoundException("Método de pago Yape no encontrado"));
-        
-        // 7. Crear la cita con estado de pago PROCESSING
+        // 6. Crear la cita (siempre presencial y confirmada)
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
         appointment.setDoctor(doctor);
@@ -170,26 +113,11 @@ public class AppointmentService {
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setTimeBlock(request.getTimeBlock());
         appointment.setReason(request.getReason());
-        appointment.setStatus(AppointmentStatus.SCHEDULED);
-        appointment.setPaymentStatus(PaymentStatus.PROCESSING); // Pago pendiente
+        appointment.setStatus(AppointmentStatus.SCHEDULED); // Directo a agendada
+        appointment.setPaymentStatus(PaymentStatus.COMPLETED); // Asumimos pago en sitio o no requerido
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
-        log.info("Cita virtual creada exitosamente con ID: {}", savedAppointment.getId());
-        
-        // 8. Crear el pago asociado
-        Payment payment = new Payment();
-        payment.setAppointment(savedAppointment);
-        payment.setPaymentMethod(paymentMethod);
-        payment.setAmount(specialty.getConsultationPrice());
-        payment.setProcessingFee(paymentMethod.getProcessingFee());
-        payment.calculateTotalAmount();
-        payment.setStatus(PaymentStatus.PROCESSING);
-        payment.setRequiresValidation(true);
-        payment.setPayerName(patient.getFirstName() + " " + patient.getLastName());
-        payment.setPayerEmail(user.getEmail());
-        
-        paymentRepository.save(payment);
-        log.info("Pago pendiente creado para la cita virtual ID: {}", savedAppointment.getId());
+        log.info("Cita creada exitosamente con ID: {}", savedAppointment.getId());
         
         return mapToResponse(savedAppointment);
     }
@@ -198,11 +126,11 @@ public class AppointmentService {
      * Subir comprobante de pago para una cita virtual
      */
     @Transactional
-    public boolean uploadPaymentReceipt(Long appointmentId, MultipartFile file, UserDetails userDetails) {
+    public boolean uploadPaymentReceipt(Long appointmentId, MultipartFile file, String userEmail) {
         log.info("Subiendo comprobante de pago para cita ID: {}", appointmentId);
         
         // 1. Verificar que el usuario es el propietario de la cita
-        User user = userRepository.findByEmail(userDetails.getUsername())
+        User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
         
         Patient patient = patientRepository.findByUserId(user.getId())
@@ -252,20 +180,19 @@ public class AppointmentService {
     }
     
     /**
-     * Obtener citas del paciente autenticado
+     * Obtener mis citas (para pacientes del portal web)
      */
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> getPatientAppointments(UserDetails userDetails) {
-        log.info("Obteniendo citas del paciente: {}", userDetails.getUsername());
+    public List<AppointmentResponse> getPatientAppointments(String userEmail) {
+        log.info("Obteniendo citas para el usuario: {}", userEmail);
         
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con email: " + userEmail));
         
         Patient patient = patientRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException("El usuario no tiene un perfil de paciente asociado"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un perfil de paciente para el usuario con id: " + user.getId()));
         
         List<Appointment> appointments = appointmentRepository.findByPatientIdOrderByAppointmentDateDesc(patient.getId());
-        
         return appointments.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

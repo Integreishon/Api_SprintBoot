@@ -7,6 +7,7 @@ import com.hospital.backend.catalog.repository.PaymentMethodRepository;
 import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
+import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentMethodType;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.dto.request.CreatePaymentRequest;
@@ -106,6 +107,12 @@ public class PaymentService {
         // Sincronizar estado con la cita
         Appointment appointment = payment.getAppointment();
         appointment.setPaymentStatus(PaymentStatus.COMPLETED);
+        
+        // Cambiar el estado de la cita de PENDING_VALIDATION a SCHEDULED
+        if (appointment.getStatus() == AppointmentStatus.PENDING_VALIDATION) {
+            appointment.setStatus(AppointmentStatus.SCHEDULED);
+        }
+        
         appointmentRepository.save(appointment);
         
         Payment savedPayment = paymentRepository.save(payment);
