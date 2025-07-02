@@ -44,6 +44,7 @@ public class SecurityConfig {
                 // Catálogos públicos
                 .requestMatchers("/document-types/**").permitAll()
                 .requestMatchers("/specialties/**").permitAll()
+                .requestMatchers("/doctors/specialty/**").permitAll()
                 .requestMatchers("/payment-methods/**").permitAll()
                 
                 // Chatbot público

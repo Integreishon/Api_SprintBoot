@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 public class User extends BaseEntity {
     
 	@Size(min = 8, max = 8, message = "El DNI debe tener exactamente 8 caracteres")
-	@Column(name = "dni", nullable = true, unique = true, length = 8)
+	@Column(name = "dni", nullable = false, unique = true, length = 8)
     private String dni;
     
     @Column(name = "email", nullable = false, unique = true)

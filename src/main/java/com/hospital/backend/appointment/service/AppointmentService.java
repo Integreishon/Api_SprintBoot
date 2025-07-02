@@ -99,11 +99,11 @@ public class AppointmentService {
         // 4. Validar disponibilidad del doctor
         validateDoctorAvailability(doctor.getId(), request.getAppointmentDate(), request.getTimeBlock());
         
-        // 5. Validar si la especialidad requiere derivación
-        if (specialty.getRequiresReferral() != null && specialty.getRequiresReferral() 
+        // 5. Validar si la especialidad requiere derivación (DESHABILITADO)
+        /* if (specialty.getRequiresReferral() != null && specialty.getRequiresReferral() 
                 && (request.getReferralId() == null)) {
             throw new BusinessException("Esta especialidad requiere derivación médica");
-        }
+        } */
         
         // 6. Crear la cita (siempre presencial y confirmada)
         Appointment appointment = new Appointment();

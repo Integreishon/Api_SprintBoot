@@ -7,8 +7,7 @@ import java.time.LocalTime;
  */
 public enum TimeBlock {
     MORNING("Mañana", LocalTime.of(7, 0), LocalTime.of(13, 0), 20),
-    AFTERNOON("Tarde", LocalTime.of(16, 0), LocalTime.of(20, 0), 25),
-    FULL_DAY("Día completo", LocalTime.of(7, 0), LocalTime.of(20, 0), 45);
+    AFTERNOON("Tarde", LocalTime.of(16, 0), LocalTime.of(20, 0), 25);
     
     private final String displayName;
     private final LocalTime startTime;
@@ -37,4 +36,4 @@ public enum TimeBlock {
     public int getDefaultCapacity() {
         return defaultCapacity;
     }
-} 
+}

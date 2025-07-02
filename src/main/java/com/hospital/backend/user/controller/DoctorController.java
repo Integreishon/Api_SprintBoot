@@ -50,6 +50,7 @@ public class DoctorController {
     }
     
     @GetMapping("/specialty/{specialtyId}")
+    @PreAuthorize("hasAnyRole('PATIENT', 'ADMIN', 'DOCTOR')")
     @Operation(summary = "Listar doctores por especialidad", description = "Obtiene un listado paginado de doctores filtrados por especialidad")
     public ResponseEntity<ApiResponse<PageResponse<DoctorResponse>>> getDoctorsBySpecialty(
             @PathVariable Long specialtyId,
