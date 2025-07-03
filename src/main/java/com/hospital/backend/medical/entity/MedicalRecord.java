@@ -4,13 +4,15 @@ import com.hospital.backend.appointment.entity.Appointment;
 import com.hospital.backend.common.entity.AuditEntity;
 import com.hospital.backend.enums.SeverityLevel;
 import com.hospital.backend.user.entity.Doctor;
-import com.hospital.backend.user.entity.Patient;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -34,15 +36,12 @@ public class MedicalRecord extends AuditEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false)
-    private Patient patient;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "appointment_id")
+    @JoinColumn(name = "appointment_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Appointment appointment;
     
     @Column(name = "record_date", nullable = false)
@@ -71,6 +70,7 @@ public class MedicalRecord extends AuditEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "severity")
+    @Check(constraints = "severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')")
     private SeverityLevel severity;
     
     @Column(name = "height_cm")

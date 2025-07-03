@@ -19,9 +19,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CreateMedicalRecordRequest {
 
-    @NotNull(message = "El ID del paciente es obligatorio")
-    private Long patientId;
-
     @NotNull(message = "El ID del doctor es obligatorio")
     private Long doctorId;
 

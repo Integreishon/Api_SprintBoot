@@ -3,7 +3,6 @@ package com.hospital.backend.medical.entity;
 import com.hospital.backend.common.entity.AuditEntity;
 import com.hospital.backend.enums.FileType;
 import com.hospital.backend.enums.UploadSource;
-import com.hospital.backend.user.entity.Patient;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,11 +29,7 @@ public class MedicalAttachment extends AuditEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false)
-    private Patient patient;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "medical_record_id")
+    @JoinColumn(name = "medical_record_id", nullable = false)
     private MedicalRecord medicalRecord;
     
     @Column(name = "file_name", nullable = false)

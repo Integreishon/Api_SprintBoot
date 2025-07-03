@@ -5,7 +5,6 @@ import com.hospital.backend.medical.dto.response.MedicalRecordResponse;
 import com.hospital.backend.medical.entity.MedicalRecord;
 import com.hospital.backend.medical.repository.MedicalRecordRepository;
 import com.hospital.backend.appointment.repository.AppointmentRepository;
-import com.hospital.backend.user.repository.PatientRepository;
 import com.hospital.backend.user.repository.DoctorRepository;
 import com.hospital.backend.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,21 +24,17 @@ public class MedicalRecordService {
 
     private final MedicalRecordRepository medicalRecordRepository;
     private final AppointmentRepository appointmentRepository;
-    private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
 
     @Transactional
     public MedicalRecordResponse create(CreateMedicalRecordRequest request) {
         var appointment = appointmentRepository.findById(request.getAppointmentId())
                 .orElseThrow(() -> new BusinessException("Cita no encontrada"));
-        var patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new BusinessException("Paciente no encontrado"));
         var doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new BusinessException("Doctor no encontrado"));
 
         MedicalRecord medicalRecord = new MedicalRecord();
         medicalRecord.setAppointment(appointment);
-        medicalRecord.setPatient(patient);
         medicalRecord.setDoctor(doctor);
         medicalRecord.setRecordDate(LocalDateTime.now());
         medicalRecord.setChiefComplaint(request.getChiefComplaint());
@@ -70,8 +66,18 @@ public class MedicalRecordService {
     }
 
     @Transactional(readOnly = true)
-    public List<MedicalRecordResponse> getByPatient(Long patientId, String startDate, String endDate) {
-        List<MedicalRecord> records = medicalRecordRepository.findByPatientId(patientId, startDate, endDate);
+    public List<MedicalRecordResponse> getByPatient(Long patientId, String startDateStr, String endDateStr) {
+        LocalDateTime startDate = null;
+        if (startDateStr != null && !startDateStr.isEmpty()) {
+            startDate = LocalDate.parse(startDateStr, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+        }
+
+        LocalDateTime endDate = null;
+        if (endDateStr != null && !endDateStr.isEmpty()) {
+            endDate = LocalDate.parse(endDateStr, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
+        }
+
+        List<MedicalRecord> records = medicalRecordRepository.findByUserIdWithDateFilter(patientId, startDate, endDate);
         return records.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -95,10 +101,10 @@ public class MedicalRecordService {
     private MedicalRecordResponse mapToResponse(MedicalRecord medicalRecord) {
         return MedicalRecordResponse.builder()
                 .id(medicalRecord.getId())
-                .patientId(medicalRecord.getPatient().getId())
-                .patientName(medicalRecord.getPatient().getFirstName() + " " + medicalRecord.getPatient().getLastName())
-                .patientDocument(medicalRecord.getPatient().getUser().getDni())
-                .patientAge(calculateAge(medicalRecord.getPatient().getBirthDate()))
+                .patientId(medicalRecord.getAppointment().getPatient().getId())
+                .patientName(medicalRecord.getAppointment().getPatient().getFirstName() + " " + medicalRecord.getAppointment().getPatient().getLastName())
+                .patientDocument(medicalRecord.getAppointment().getPatient().getUser().getDni())
+                .patientAge(calculateAge(medicalRecord.getAppointment().getPatient().getBirthDate()))
                 .doctorId(medicalRecord.getDoctor().getId())
                 .doctorName(medicalRecord.getDoctor().getFirstName() + " " + medicalRecord.getDoctor().getLastName())
                 .doctorSpecialty(medicalRecord.getDoctor().getSpecialties().stream()

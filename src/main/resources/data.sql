@@ -197,3 +197,58 @@ SELECT
     d.id, 3, 'AFTERNOON', 15, true, NOW(), NOW()
 FROM doctors d WHERE d.cmp_number = 'CMP789012'
 ON CONFLICT (doctor_id, day_of_week, time_block) DO NOTHING;
+
+-- ============================================================================
+-- CITA DE PRUEBA Y REGISTRO MÉDICO ASOCIADO
+-- ============================================================================
+
+-- 1. Insertar una cita para el paciente Carlos López con el Dr. Mario
+WITH appointment_data AS (
+    SELECT 
+        p.id as patient_id,
+        d.id as doctor_id,
+        s.id as specialty_id
+    FROM patients p
+    JOIN users u ON p.user_id = u.id
+    JOIN doctors d ON d.cmp_number = 'CMP123456'
+    JOIN specialties s ON s.name = 'Urología'
+    WHERE u.email = 'paciente@ejemplo.com'
+)
+INSERT INTO appointments (
+    patient_id, doctor_id, specialty_id, 
+    appointment_date, time_block, reason, status, payment_status, 
+    created_at, updated_at
+)
+SELECT 
+    patient_id, doctor_id, specialty_id,
+    '2024-08-01', 'MORNING', 'Consulta urológica de seguimiento', 'SCHEDULED', 'COMPLETED',
+    NOW(), NOW()
+FROM appointment_data
+ON CONFLICT (id) DO NOTHING;
+
+
+-- 2. Insertar un registro médico para la cita anterior
+WITH medical_record_data AS (
+    SELECT
+        a.id as appointment_id,
+        a.doctor_id
+    FROM appointments a
+    JOIN patients p ON a.patient_id = p.id
+    JOIN users u ON p.user_id = u.id
+    WHERE u.email = 'paciente@ejemplo.com'
+    AND a.appointment_date = '2024-08-01'
+    LIMIT 1
+)
+INSERT INTO medical_records (
+    doctor_id, appointment_id, record_date,
+    chief_complaint, symptoms, diagnosis, treatment_plan, notes,
+    severity, weight_kg, blood_pressure, temperature, created_at, updated_at,
+    created_by, updated_by
+)
+SELECT
+    mrd.doctor_id, mrd.appointment_id, '2024-08-01 09:30:00',
+    'Dolor leve en la zona lumbar', 'Dolor intermitente desde hace 3 días', 'Posible cálculo renal pequeño', 'Aumentar ingesta de líquidos, analgésicos si es necesario', 'Se solicita ecografía renal para confirmar diagnóstico.',
+    'MEDIUM', 85.5, '120/80', 36.8, NOW(), NOW(),
+    'system', 'system'
+FROM medical_record_data
+ON CONFLICT (id) DO NOTHING;

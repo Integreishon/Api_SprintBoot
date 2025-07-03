@@ -31,7 +31,6 @@ public class MedicalAttachmentService {
 
         MedicalAttachment attachment = new MedicalAttachment();
         attachment.setMedicalRecord(medicalRecord);
-        attachment.setPatient(medicalRecord.getPatient());
         attachment.setFileName(request.getFileName());
         attachment.setFileType(FileType.valueOf(request.getFileType()));
         attachment.setFileSize(request.getFileSize());
@@ -71,8 +70,8 @@ public class MedicalAttachmentService {
     private MedicalAttachmentResponse mapToResponse(MedicalAttachment attachment) {
         return MedicalAttachmentResponse.builder()
                 .id(attachment.getId())
-                .patientId(attachment.getPatient().getId())
-                .patientName(attachment.getPatient().getFirstName() + " " + attachment.getPatient().getLastName())
+                .patientId(attachment.getMedicalRecord().getAppointment().getPatient().getId())
+                .patientName(attachment.getMedicalRecord().getAppointment().getPatient().getFirstName() + " " + attachment.getMedicalRecord().getAppointment().getPatient().getLastName())
                 .medicalRecordId(attachment.getMedicalRecord() != null ? attachment.getMedicalRecord().getId() : null)
                 .fileName(attachment.getFileName())
                 .filePath(attachment.getFilePath())

@@ -22,7 +22,8 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
     /**
      * Buscar archivos por paciente
      */
-    Page<MedicalAttachment> findByPatientId(Long patientId, Pageable pageable);
+    @Query("SELECT ma FROM MedicalAttachment ma WHERE ma.medicalRecord.appointment.patient.id = :patientId")
+    Page<MedicalAttachment> findByPatientId(@Param("patientId") Long patientId, Pageable pageable);
 
     List<MedicalAttachment> findByMedicalRecordId(Long medicalRecordId);
     
@@ -45,7 +46,8 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
     /**
      * Buscar archivos por paciente y tipo
      */
-    Page<MedicalAttachment> findByPatientIdAndFileType(Long patientId, FileType fileType, Pageable pageable);
+    @Query("SELECT ma FROM MedicalAttachment ma WHERE ma.medicalRecord.appointment.patient.id = :patientId AND ma.fileType = :fileType")
+    Page<MedicalAttachment> findByPatientIdAndFileType(@Param("patientId") Long patientId, @Param("fileType") FileType fileType, Pageable pageable);
     
     /**
      * Buscar archivos por nombre (parcial case insensitive)
@@ -62,7 +64,8 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
     /**
      * Contar archivos por paciente
      */
-    long countByPatientId(Long patientId);
+    @Query("SELECT COUNT(ma) FROM MedicalAttachment ma WHERE ma.medicalRecord.appointment.patient.id = :patientId")
+    long countByPatientId(@Param("patientId") Long patientId);
     
     /**
      * Contar archivos por tipo
@@ -71,7 +74,7 @@ public interface MedicalAttachmentRepository extends JpaRepository<MedicalAttach
    
     long countByUploadSource(UploadSource uploadSource);
 
-    @Query("SELECT ma FROM MedicalAttachment ma WHERE ma.patient.id = :patientId AND ma.fileType = :fileType AND ma.uploadDate BETWEEN :startDate AND :endDate")
+    @Query("SELECT ma FROM MedicalAttachment ma WHERE ma.medicalRecord.appointment.patient.id = :patientId AND ma.fileType = :fileType AND ma.uploadDate BETWEEN :startDate AND :endDate")
     Page<MedicalAttachment> findByPatientIdAndFileTypeAndUploadDateBetween(
             @Param("patientId") Long patientId,
             @Param("fileType") FileType fileType,
