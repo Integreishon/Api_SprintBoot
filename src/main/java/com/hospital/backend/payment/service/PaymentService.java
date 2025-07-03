@@ -122,6 +122,57 @@ public class PaymentService {
     }
     
     /**
+     * Confirma un pago verificado por el webhook de Mercado Pago.
+     * Este método es llamado por MercadoPagoService.
+     */
+    @Transactional
+    public PaymentResponse confirmPaymentByMp(Long appointmentId, String transactionReference) {
+        log.info("Confirmando pago vía Mercado Pago para la cita ID: {} con referencia: {}", appointmentId, transactionReference);
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING_VALIDATION) {
+            log.warn("Se intentó confirmar un pago para una cita que no está pendiente de validación. Cita ID: {}, Estado: {}",
+                    appointmentId, appointment.getStatus());
+            // Dependiendo de la lógica de negocio, podrías lanzar una excepción o simplemente ignorar.
+            // Por ahora, lo ignoramos para evitar que re-procesamientos de webhooks fallen.
+            return null;
+        }
+
+        // Busca si ya existe un pago, si no, lo crea.
+        Payment payment = paymentRepository.findByAppointmentId(appointmentId)
+                .orElseGet(() -> {
+                    log.info("No se encontró un pago existente para la cita {}. Creando uno nuevo.", appointmentId);
+                    Payment newPayment = new Payment();
+                    newPayment.setAppointment(appointment);
+                    // Asumimos un método de pago "Mercado Pago" que debería existir en la DB
+                    // TO-DO: Hacer esto más robusto, buscando por un ENUM o código en vez de ID=3
+                    PaymentMethod mpMethod = paymentMethodRepository.findById(3L)
+                            .orElseThrow(() -> new ResourceNotFoundException("PaymentMethod", "id", 3L));
+                    newPayment.setPaymentMethod(mpMethod);
+                    newPayment.setAmount(appointment.getSpecialty().getFinalPrice()); // Usar el costo de la especialidad
+                    newPayment.setStatus(PaymentStatus.PROCESSING);
+                    return newPayment;
+                });
+
+        // Actualizar estado del pago y de la cita
+        payment.setStatus(PaymentStatus.COMPLETED);
+        payment.setTransactionReference(transactionReference);
+        payment.setPaymentDate(LocalDateTime.now());
+
+        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
+        appointment.setStatus(AppointmentStatus.SCHEDULED);
+
+        appointmentRepository.save(appointment);
+        Payment savedPayment = paymentRepository.save(payment);
+
+        log.info("Pago para la cita {} confirmado y estado de la cita actualizado a SCHEDULED.", appointmentId);
+
+        return mapToPaymentResponse(savedPayment);
+    }
+    
+    /**
      * Marcar un pago como fallido
      */
     @Transactional

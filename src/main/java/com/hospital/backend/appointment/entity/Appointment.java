@@ -123,6 +123,20 @@ public class Appointment extends BaseEntity {
      * Se calcula automáticamente desde specialty.consultation_price
      */
     public java.math.BigDecimal getPrice() {
-        return this.specialty != null ? this.specialty.getFinalPrice() : null;
+        if (this.specialty == null) {
+            return null;
+        }
+        
+        try {
+            java.math.BigDecimal price = this.specialty.getFinalPrice();
+            if (price == null || price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                // Si el precio calculado es nulo o cero, intentar obtener directamente el precio de consulta
+                return this.specialty.getConsultationPrice();
+            }
+            return price;
+        } catch (Exception e) {
+            // En caso de error, intentar obtener directamente el precio de consulta
+            return this.specialty.getConsultationPrice();
+        }
     }
 }

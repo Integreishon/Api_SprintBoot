@@ -112,6 +112,13 @@
 			<artifactId>commons-lang3</artifactId>
 		</dependency>
 
+		<!-- Mercado Pago SDK -->
+		<dependency>
+			<groupId>com.mercadopago</groupId>
+			<artifactId>sdk-java</artifactId>
+			<version>2.5.0</version>
+		</dependency>
+
 		<!-- Development Tools -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -65,4 +65,8 @@ public class Patient extends BaseEntity {
     
     @Column(name = "reniec_verified", nullable = false)
     private Boolean reniecVerified = false;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }

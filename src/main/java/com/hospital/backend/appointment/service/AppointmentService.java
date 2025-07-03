@@ -105,7 +105,7 @@ public class AppointmentService {
             throw new BusinessException("Esta especialidad requiere derivación médica");
         } */
         
-        // 6. Crear la cita (siempre presencial y confirmada)
+        // 6. Crear la cita con estado pendiente de validación
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
         appointment.setDoctor(doctor);
@@ -113,8 +113,8 @@ public class AppointmentService {
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setTimeBlock(request.getTimeBlock());
         appointment.setReason(request.getReason());
-        appointment.setStatus(AppointmentStatus.SCHEDULED); // Directo a agendada
-        appointment.setPaymentStatus(PaymentStatus.COMPLETED); // Asumimos pago en sitio o no requerido
+        appointment.setStatus(AppointmentStatus.PENDING_VALIDATION); // Inicia en pendiente de validación
+        appointment.setPaymentStatus(PaymentStatus.PROCESSING); // El pago también está en proceso de validación
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
         log.info("Cita creada exitosamente con ID: {}", savedAppointment.getId());
