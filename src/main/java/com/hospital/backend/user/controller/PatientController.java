@@ -18,6 +18,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/patients")
@@ -62,6 +64,24 @@ public class PatientController {
             @PathVariable String dni) {
         PatientResponse patient = patientService.findByDni(dni);
         return ResponseEntity.ok(ApiResponse.success("Paciente encontrado", patient));
+    }
+
+    @GetMapping("/byUserId/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('PATIENT') and #userId == principal.id)")
+    @Operation(summary = "Buscar paciente por ID de usuario", description = "Busca un paciente por su ID de usuario asociado. Un paciente solo puede consultar su propia información.")
+    public ResponseEntity<ApiResponse<PatientResponse>> getPatientByUserId(@PathVariable Long userId) {
+        PatientResponse patient = patientService.findByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success("Paciente encontrado por ID de usuario", patient));
+    }
+
+    @GetMapping("/check-dni/{dni}")
+    @Operation(summary = "Verificar si un DNI existe", description = "Verifica si un DNI ya está registrado en el sistema")
+    public ResponseEntity<Map<String, Boolean>> checkDniExists(
+            @PathVariable String dni) {
+        boolean exists = patientService.existsByDni(dni);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("exists", exists);
+        return ResponseEntity.ok(response);
     }
     
     @PostMapping

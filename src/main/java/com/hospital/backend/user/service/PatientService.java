@@ -60,6 +60,18 @@ public class PatientService {
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente", "DNI", dni));
     }
     
+    @Transactional(readOnly = true)
+    public PatientResponse findByUserId(Long userId) {
+        return patientRepository.findByUserId(userId)
+                .map(this::mapToPatientResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente", "userId", userId));
+    }
+    
+    @Transactional(readOnly = true)
+    public boolean existsByDni(String dni) {
+        return userRepository.findByDni(dni).isPresent();
+    }
+    
     public PatientResponse create(CreatePatientRequest request) {
         validateCreatePatientRequest(request);
         

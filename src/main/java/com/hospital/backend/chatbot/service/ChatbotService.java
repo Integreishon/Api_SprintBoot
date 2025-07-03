@@ -211,22 +211,30 @@ public class ChatbotService {
             
             // Usuario (si está autenticado)
             if (request.getUserId() != null) {
-                User user = userRepository.findById(request.getUserId()).orElse(null);
-                conversation.setUser(user);
+                userRepository.findById(request.getUserId()).ifPresent(conversation::setUser);
             }
             
             // Metadatos
             conversation.setIntentDetected(response.getIntentDetected());
-            conversation.setEntitiesDetected(convertToJson(response.getEntitiesDetected()));
+            if (response.getEntitiesDetected() != null && !response.getEntitiesDetected().isEmpty()) {
+                conversation.setEntitiesDetected(convertToJson(response.getEntitiesDetected()));
+            }
             
             // Referencias a la base de conocimientos
-            List<Long> knowledgeBaseIds = response.getReferences().stream()
-                    .map(KnowledgeBaseReferenceResponse::getId)
-                    .collect(Collectors.toList());
-            conversation.setKnowledgeBaseEntriesUsed(convertToJson(knowledgeBaseIds));
+            if (response.getReferences() != null && !response.getReferences().isEmpty()) {
+                List<Long> knowledgeBaseIds = response.getReferences().stream()
+                        .map(KnowledgeBaseReferenceResponse::getId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                if (!knowledgeBaseIds.isEmpty()) {
+                    conversation.setKnowledgeBaseEntriesUsed(convertToJson(knowledgeBaseIds));
+                }
+            }
             
             // Acciones
-            conversation.setActionsTaken(convertToJson(response.getActions()));
+            if (response.getActions() != null && !response.getActions().isEmpty()) {
+                conversation.setActionsTaken(convertToJson(response.getActions()));
+            }
             
             // Guardar en la base de datos
             ChatbotConversation savedConversation = conversationRepository.save(conversation);
@@ -235,7 +243,8 @@ public class ChatbotService {
             response.setConversationId(savedConversation.getId());
             
         } catch (Exception e) {
-            log.error("Error al guardar conversación: {}", e.getMessage());
+            log.error("Error catastrófico al intentar guardar la conversación del chatbot. SessionID: {}. Query: '{}'. Error: {}", 
+                request.getSessionId(), request.getQuery(), e.getMessage(), e);
         }
     }
     
@@ -298,12 +307,12 @@ public class ChatbotService {
      * Buscar entradas relevantes en la base de conocimientos
      */
     private List<KnowledgeBaseEntryResponse> findRelevantEntries(List<String> keywords) {
-        if (keywords.isEmpty()) {
+        if (keywords == null || keywords.isEmpty()) {
             return Collections.emptyList();
         }
         
         // Utilizar las tres primeras palabras clave (si hay suficientes)
-        String keyword1 = keywords.size() > 0 ? keywords.get(0) : "";
+        String keyword1 = keywords.get(0);
         String keyword2 = keywords.size() > 1 ? keywords.get(1) : keyword1;
         String keyword3 = keywords.size() > 2 ? keywords.get(2) : keyword2;
         
@@ -353,7 +362,26 @@ public class ChatbotService {
         }
         
         try {
-            return objectMapper.readValue(json, Map.class);
+            // Primero intentamos verificar si es un array o un objeto
+            Object jsonObj = objectMapper.readValue(json, Object.class);
+            
+            // Si es un array, convertirlo a un mapa con índices como claves
+            if (jsonObj instanceof List) {
+                List<?> list = (List<?>) jsonObj;
+                Map<String, Object> resultMap = new LinkedHashMap<>();
+                for (int i = 0; i < list.size(); i++) {
+                    resultMap.put(String.valueOf(i), list.get(i));
+                }
+                return resultMap;
+            } else if (jsonObj instanceof Map) {
+                // Si ya es un mapa, simplemente devolverlo
+                return (Map<String, Object>) jsonObj;
+            } else {
+                // Si es un valor simple, envolverlo en un mapa
+                Map<String, Object> resultMap = new LinkedHashMap<>();
+                resultMap.put("value", jsonObj);
+                return resultMap;
+            }
         } catch (JsonProcessingException e) {
             log.error("Error al parsear JSON a mapa: {}", e.getMessage());
             return Collections.emptyMap();

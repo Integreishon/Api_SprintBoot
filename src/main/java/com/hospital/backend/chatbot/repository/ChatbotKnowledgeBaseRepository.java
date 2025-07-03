@@ -41,7 +41,13 @@ public interface ChatbotKnowledgeBaseRepository extends JpaRepository<ChatbotKno
            "   LOWER(kb.answer) LIKE LOWER(CONCAT('%', :keyword3, '%')) OR " +
            "   LOWER(kb.keywords) LIKE LOWER(CONCAT('%', :keyword3, '%'))" +
            ") " +
-           "ORDER BY kb.priority DESC, kb.usageCount DESC")
+           "ORDER BY CASE " +
+           "    WHEN LOWER(kb.question) LIKE LOWER(CONCAT('%', :keyword1, '%', :keyword2, '%', :keyword3, '%')) THEN 1 " + // Coincidencia de frase
+           "    WHEN LOWER(kb.question) LIKE LOWER(CONCAT('%', :keyword1, '%')) AND LOWER(kb.question) LIKE LOWER(CONCAT('%', :keyword2, '%')) AND LOWER(kb.question) LIKE LOWER(CONCAT('%', :keyword3, '%')) THEN 2 " + // Todas las palabras clave en la pregunta
+           "    WHEN LOWER(kb.question) LIKE LOWER(CONCAT('%', :keyword1, '%')) THEN 3 " + // Palabra clave principal en la pregunta
+           "    WHEN LOWER(kb.keywords) LIKE LOWER(CONCAT('%', :keyword1, '%')) THEN 4 " + // Palabra clave principal en las keywords
+           "    ELSE 5 " +
+           "END, kb.priority DESC, kb.usageCount DESC")
     List<ChatbotKnowledgeBase> findActiveByMultipleKeywords(
             @Param("keyword1") String keyword1, 
             @Param("keyword2") String keyword2, 

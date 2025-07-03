@@ -40,6 +40,7 @@ public class SecurityConfig {
                     "/api/v1/external/**",
                     "/public/**",
                     "/patients/register",
+                    "/patients/check-dni/**",
                     "/document-types/**",
                     "/specialties/**",
                     "/doctors/specialty/**",

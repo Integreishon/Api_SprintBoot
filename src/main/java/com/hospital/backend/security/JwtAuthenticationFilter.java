@@ -36,7 +36,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/auth/",
         "/api/v1/external/",
         "/public/",
+        "/api/chatbot/",
         "/patients/register",
+        "/patients/check-dni/",
         "/swagger-ui",
         "/v3/api-docs"
     );
