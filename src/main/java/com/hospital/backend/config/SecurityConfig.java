@@ -28,45 +28,34 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Autenticación pública
-                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers(
+                    "/auth/**",
+                    "/api/v1/external/**",
+                    "/public/**",
+                    "/patients/register",
+                    "/document-types/**",
+                    "/specialties/**",
+                    "/doctors/specialty/**",
+                    "/payment-methods/**",
+                    "/chatbot/**",
+                    "/swagger-ui/**", "/swagger-ui.html",
+                    "/v3/api-docs/**", "/v3/api-docs/swagger-config",
+                    "/swagger-resources/**", "/webjars/**",
+                    "/actuator/**"
+                ).permitAll()
                 
-                // Registro público de pacientes
-                .requestMatchers("/patients/register").permitAll()
-                
-                // Catálogos públicos
-                .requestMatchers("/document-types/**").permitAll()
-                .requestMatchers("/specialties/**").permitAll()
-                .requestMatchers("/doctors/specialty/**").permitAll()
-                .requestMatchers("/payment-methods/**").permitAll()
-                
-                // Chatbot público
-                .requestMatchers("/chatbot/**").permitAll()
-                
-                // Portal Virtual - Rutas específicas
                 .requestMatchers("/appointments/virtual").hasRole("PATIENT")
                 .requestMatchers("/appointments/me").hasRole("PATIENT")
                 .requestMatchers("/appointments/*/receipt").hasRole("PATIENT")
                 .requestMatchers("/reception/**").hasRole("RECEPTIONIST")
                 
-                // Swagger UI y documentación
-                .requestMatchers(
-                    "/swagger-ui/**", "/swagger-ui.html",
-                    "/v3/api-docs/**", "/v3/api-docs/swagger-config",
-                    "/swagger-resources/**", "/webjars/**"
-                ).permitAll()
-                
-                // Actuator para monitoreo
-                .requestMatchers("/actuator/**").permitAll()
-                
-                // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

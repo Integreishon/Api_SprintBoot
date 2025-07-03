@@ -34,6 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     // Lista de rutas a excluir del filtro JWT
     private static final List<String> EXCLUDED_PATHS = List.of(
         "/auth/",
+        "/api/v1/external/",
+        "/public/",
         "/patients/register",
         "/swagger-ui",
         "/v3/api-docs"
@@ -45,12 +47,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
         
         final String requestURI = request.getRequestURI();
+        boolean isExcluded = isExcluded(requestURI);
+
+        log.info("--- JWT Filter ---");
+        log.info("Request URI: {}", requestURI);
+        log.info("Is path excluded? {}", isExcluded);
 
         // Si la ruta está en la lista de exclusión, saltar el filtro
-        if (isExcluded(requestURI)) {
+        if (isExcluded) {
+            log.info("Result: Path is public. Skipping JWT validation.");
             filterChain.doFilter(request, response);
             return;
         }
+
+        log.info("Result: Path requires authentication. Proceeding with JWT validation.");
 
         try {
             String jwt = getJwtFromRequest(request);

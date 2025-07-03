@@ -9,8 +9,19 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 public class RegisterRequest {
+    
+    // User data
+    @NotBlank(message = "El nombre es requerido")
+    private String firstName;
+    
+    @NotBlank(message = "El apellido paterno es requerido")
+    private String lastName;
+    
+    private String secondLastName; // Opcional
     
     @NotBlank(message = "El DNI es requerido")
     @Size(min = 8, max = 8, message = "El DNI debe tener 8 dígitos")
@@ -30,6 +41,15 @@ public class RegisterRequest {
     private String confirmPassword;
     
     @NotNull(message = "El rol es requerido")
-    private UserRole role;
-    
+    private UserRole role = UserRole.PATIENT; // Default to PATIENT
+
+    // Patient data
+    @NotNull(message = "La fecha de nacimiento es requerida")
+    private LocalDate birthDate;
+
+    @NotBlank(message = "El género es requerido")
+    private String gender;
+
+    @NotBlank(message = "El teléfono es requerido")
+    private String phone;
 }

@@ -10,7 +10,10 @@ import com.hospital.backend.common.exception.BusinessException;
 import com.hospital.backend.common.exception.UnauthorizedException;
 import com.hospital.backend.common.exception.ValidationException;
 import com.hospital.backend.common.util.DateUtils;
+import com.hospital.backend.enums.Gender;
 import com.hospital.backend.security.JwtTokenProvider;
+import com.hospital.backend.user.entity.Patient;
+import com.hospital.backend.user.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +28,7 @@ import java.time.LocalDateTime;
 public class AuthService {
     
     private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     
@@ -57,21 +61,33 @@ public class AuthService {
             throw new BusinessException("El DNI o email ya está registrado");
         }
         
+        // 1. Crear y guardar el usuario
         User user = new User();
         user.setDni(request.getDni());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
         user.setIsActive(true);
+        User savedUser = userRepository.save(user);
         
-        user = userRepository.save(user);
+        // 2. Crear y guardar el paciente asociado
+        Patient patient = new Patient();
+        patient.setUser(savedUser);
+        patient.setFirstName(request.getFirstName());
+        patient.setLastName(request.getLastName());
+        patient.setSecondLastName(request.getSecondLastName());
+        patient.setBirthDate(request.getBirthDate());
+        patient.setGender(Gender.fromString(request.getGender()));
+        patient.setPhone(request.getPhone());
+        patientRepository.save(patient);
         
-        String token = jwtTokenProvider.generateToken(user);
+        // 3. Generar token y respuesta
+        String token = jwtTokenProvider.generateToken(savedUser);
         LocalDateTime expiresAt = DateUtils.nowInLima().plusSeconds(jwtTokenProvider.getExpirationTime() / 1000);
         
-        log.info("Nuevo usuario registrado: {} con rol {}", user.getEmail(), user.getRole());
+        log.info("Nuevo usuario y paciente registrado: {} con rol {}", savedUser.getEmail(), savedUser.getRole());
         
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), expiresAt);
+        return new AuthResponse(token, savedUser.getId(), savedUser.getEmail(), savedUser.getRole(), expiresAt);
     }
     
     @Transactional
