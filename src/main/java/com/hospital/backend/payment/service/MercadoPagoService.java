@@ -539,7 +539,7 @@ public class MercadoPagoService {
                             .unitPrice(amount)
                             .currencyId("PEN")
                             .build());
-
+            
             // 8. CONFIGURAR URLS DE RETORNO CORRECTAMENTE
             String successUrl = "http://localhost:5173/payment/success?appointment_id=" + appointmentId;
             String failureUrl = "http://localhost:5173/payment/failure?appointment_id=" + appointmentId;
