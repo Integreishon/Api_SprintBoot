@@ -5,6 +5,8 @@ import com.hospital.backend.common.dto.PageResponse;
 import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.dto.request.CreatePaymentRequest;
+import com.hospital.backend.payment.dto.request.CreatePreferenceRequest;
+import com.hospital.backend.payment.dto.request.ProcessPaymentRequest;
 import com.hospital.backend.payment.dto.response.PaymentResponse;
 import com.hospital.backend.payment.dto.response.PaymentSummaryResponse;
 import com.hospital.backend.payment.service.PaymentService;
@@ -196,15 +198,55 @@ public class PaymentController {
     // Mercado Pago Integration - MEJORADO
     // =========================
 
+    @Operation(summary = "Procesar pago con Mercado Pago (Brick)")
+    @PostMapping("/mercadopago/process-payment")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PaymentResponse>> processMercadoPagoPayment(
+            @Valid @RequestBody ProcessPaymentRequest request) {
+
+        log.info("🚀 POST /api/payments/mercadopago/process-payment - Iniciando procesamiento de pago");
+        log.info("📋 Datos de pago recibidos: {}", request);
+
+        try {
+            PaymentResponse paymentResponse = mercadoPagoService.processPayment(request);
+            log.info("✅ Pago procesado exitosamente: {}", paymentResponse.getId());
+            return ResponseEntity.ok(ApiResponse.success("Pago procesado exitosamente", paymentResponse));
+        } catch (MPApiException apiEx) {
+            log.error("❌ Error de API de Mercado Pago: {}", apiEx.getMessage());
+            
+            // Extraer detalles específicos del error
+            String errorContent = apiEx.getApiResponse() != null ? apiEx.getApiResponse().getContent() : "";
+            
+            if (errorContent != null && errorContent.contains("Invalid users involved")) {
+                log.error("❌ ERROR DE CONFIGURACIÓN DE USUARIOS: {}", errorContent);
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                        .body(ApiResponse.error("Error de configuración de usuarios de prueba en Mercado Pago. " +
+                                "Debes usar usuarios de prueba específicos creados desde el panel de desarrollador."));
+            }
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error procesando el pago con Mercado Pago: " + apiEx.getMessage()));
+        } catch (MPException mpEx) {
+            log.error("❌ Error de SDK de Mercado Pago: {}", mpEx.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error procesando el pago: " + mpEx.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Error general procesando el pago: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error inesperado procesando el pago: " + e.getMessage()));
+        }
+    }
+
     @Operation(summary = "Crear preferencia de pago en Mercado Pago")
     @PostMapping("/mercadopago/create-preference")
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> createMercadoPagoPreference(
             @Parameter(description = "ID de la cita para la cual crear el pago") @RequestParam Long appointmentId,
-            @Parameter(description = "Monto del pago") @RequestParam(required = false) BigDecimal amount) {
+            @Valid @RequestBody CreatePreferenceRequest preferenceRequest) {
         
         log.info("🚀 POST /api/payments/mercadopago/create-preference - Iniciando creación de preferencia");
-        log.info("📋 Parámetros recibidos: appointmentId={}, amount={}", appointmentId, amount);
+        log.info("📋 Parámetros recibidos: appointmentId={}, title={}, price={}", 
+                 appointmentId, preferenceRequest.getTitle(), preferenceRequest.getPrice());
         
         try {
             // Validación de parámetros
@@ -213,10 +255,13 @@ public class PaymentController {
                 return ResponseEntity.badRequest()
                     .body(ApiResponse.error("El ID de la cita es requerido"));
             }
-            
+
+            BigDecimal amount = preferenceRequest.getPrice();
+            String title = preferenceRequest.getTitle();
+
             // Si no se proporciona el monto, intentar obtenerlo de la cita
-            if (amount == null) {
-                log.info("🔍 Monto no proporcionado, obteniendo de la cita...");
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+                log.info("🔍 Monto no válido en la solicitud, obteniendo de la cita...");
                 try {
                     Appointment appointment = appointmentRepository.findById(appointmentId)
                         .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada con ID: " + appointmentId));
@@ -248,47 +293,24 @@ public class PaymentController {
             }
             
             log.info("💰 Monto final para Mercado Pago: {}", amount);
+
+            // Crear descripción para la preferencia
+            String description = (title != null && !title.isEmpty()) ? title : "Consulta Médica";
+            log.info("📝 Descripción para la preferencia: {}", description);
+
+            String preferenceId = mercadoPagoService.createPreference(appointmentId, description, amount);
+            log.info("✅ Preferencia de Mercado Pago creada con ID: {}", preferenceId);
             
-            // Validación final del monto
-            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-                log.error("❌ Monto inválido después de todos los intentos: {}", amount);
-                return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("No se pudo determinar un monto válido para el pago"));
-            }
+            return ResponseEntity.ok(ApiResponse.success("Preferencia creada exitosamente", preferenceId));
             
-            // USAR VERSIÓN SIMPLIFICADA PARA EVITAR PROBLEMAS CON autoReturn
-            log.info("🔧 Usando versión simplificada de creación de preferencia...");
-            String preferenceId = mercadoPagoService.createSimplePaymentPreference(appointmentId, amount);
-            
-            log.info("✅ Preferencia creada exitosamente: {}", preferenceId);
-            return ResponseEntity.ok(ApiResponse.success("Preferencia de Mercado Pago creada exitosamente", preferenceId));
-            
-        } catch (MPApiException e) {
-            log.error("❌ Error de API de Mercado Pago:", e);
-            log.error("📝 Detalles: status={}, message={}, response={}", 
-                    e.getStatusCode(), e.getMessage(), e.getApiResponse());
-            
-            String userMessage = "Error en la API de Mercado Pago";
-            if (e.getStatusCode() == 400) {
-                userMessage = "Datos inválidos para el pago. Verifique la información.";
-            } else if (e.getStatusCode() == 401) {
-                userMessage = "Credenciales de Mercado Pago inválidas.";
-            } else if (e.getStatusCode() >= 500) {
-                userMessage = "Error temporal en Mercado Pago. Intente nuevamente.";
-            }
-            
+        } catch (MPException | MPApiException e) {
+            log.error("❌ Error al crear la preferencia de Mercado Pago: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(userMessage + " (Código: " + e.getStatusCode() + ")"));
-                    
-        } catch (MPException e) {
-            log.error("❌ Error general de Mercado Pago:", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error de conexión con Mercado Pago: " + e.getMessage()));
-                    
+                    .body(ApiResponse.error("Error de Mercado Pago: " + e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Error inesperado:", e);
+            log.error("❌ Error inesperado: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error inesperado: " + e.getMessage()));
+                    .body(ApiResponse.error("Ocurrió un error inesperado. Por favor, intente de nuevo."));
         }
     }
 

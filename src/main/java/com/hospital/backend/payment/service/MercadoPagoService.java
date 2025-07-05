@@ -8,12 +8,20 @@ import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.entity.Payment;
 import com.hospital.backend.payment.repository.PaymentRepository;
+import com.hospital.backend.user.entity.Patient;
+import com.hospital.backend.auth.entity.User;
 import com.mercadopago.client.common.IdentificationRequest;
+import com.mercadopago.client.common.PhoneRequest;
 import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.client.payment.PaymentCreateRequest;
+import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.client.preference.*;
+import com.mercadopago.client.preference.PreferencePayerRequest;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.payment.PaymentPayer;
+import com.hospital.backend.payment.dto.request.ProcessPaymentRequest;
+import com.hospital.backend.payment.dto.response.PaymentResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +51,76 @@ public class MercadoPagoService {
 
     @Value("${mercadopago.access-token}")
     private String accessToken;
+
+    @Transactional
+    public String createPreference(Long appointmentId, String description, BigDecimal amount) throws MPException, MPApiException {
+        log.info("🚀 Iniciando creación de preferencia de pago para cita ID: {}, Desc: {}, Monto: {}", 
+                 appointmentId, description, amount);
+
+        try {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                throw new BusinessException("Access token de Mercado Pago no configurado.");
+            }
+
+            Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada con id: " + appointmentId));
+
+            PreferenceClient client = new PreferenceClient();
+
+            List<PreferenceItemRequest> items = new ArrayList<>();
+            items.add(
+                PreferenceItemRequest.builder()
+                    .title(description) // Usamos la descripción como título
+                    .quantity(1)
+                    .unitPrice(amount)
+                    .currencyId("PEN")
+                    .build());
+            
+            // Añadir información del pagador (Payer)
+            PreferencePayerRequest payerRequest = null;
+            if (appointment.getPatient() != null && appointment.getPatient().getUser() != null) {
+                Patient patient = appointment.getPatient();
+                User user = patient.getUser();
+
+                payerRequest = PreferencePayerRequest.builder()
+                        .name(patient.getFirstName())
+                        .surname(patient.getLastName())
+                        .email(user.getEmail())
+                        .phone(PhoneRequest.builder()
+                                .areaCode("51") // Código de Perú
+                                .number(patient.getPhone() != null ? patient.getPhone() : "999999999") // Teléfono de fallback
+                                .build())
+                        .build();
+            }
+
+            String successUrl = "http://localhost:5173/payment/success?appointment_id=" + appointmentId;
+            String failureUrl = "http://localhost:5173/payment/failure?appointment_id=" + appointmentId;
+            String pendingUrl = "http://localhost:5173/payment/pending?appointment_id=" + appointmentId;
+
+            PreferenceRequest request = PreferenceRequest.builder()
+                .items(items)
+                .payer(payerRequest)
+                .externalReference(appointment.getId().toString())
+                .backUrls(PreferenceBackUrlsRequest.builder()
+                    .success(successUrl)
+                    .failure(failureUrl)
+                    .pending(pendingUrl)
+                    .build())
+                .build();
+
+            com.mercadopago.resources.preference.Preference preference = client.create(request);
+            
+            log.info("✅ Preferencia creada con ID: {}", preference.getId());
+            return preference.getId();
+
+        } catch (MPApiException apiEx) {
+            log.error("❌ ERROR DE API DE MERCADO PAGO: {}", apiEx.getApiResponse().getContent(), apiEx);
+            throw apiEx;
+        } catch (MPException mpEx) {
+            log.error("❌ ERROR DE SDK DE MERCADO PAGO: {}", mpEx.getMessage(), mpEx);
+            throw mpEx;
+        }
+    }
 
     @Transactional
     public String createPaymentPreference(Long appointmentId, BigDecimal amount) throws MPException, MPApiException {
@@ -111,26 +189,26 @@ public class MercadoPagoService {
             // 7. CONFIGURAR ITEMS CON VALIDACIÓN MEJORADA
             List<PreferenceItemRequest> items = new ArrayList<>();
             String title = "Cita Médica - " + appointment.getSpecialty().getName();
-            String description = "Reserva para: " + appointment.getPatient().getFullName();
+            String descriptionForPreference = "Reserva para: " + appointment.getPatient().getFullName();
             
             // Limpiar caracteres especiales que pueden causar problemas
             title = title.replaceAll("[^a-zA-Z0-9\\s\\-_.]", "");
-            description = description.replaceAll("[^a-zA-Z0-9\\s\\-_.]", "");
+            descriptionForPreference = descriptionForPreference.replaceAll("[^a-zA-Z0-9\\s\\-_.]", "");
             
             // Limitar la longitud de los campos
             if (title.length() > 256) {
                 title = title.substring(0, 256);
             }
-            if (description.length() > 600) {
-                description = description.substring(0, 600);
+            if (descriptionForPreference.length() > 600) {
+                descriptionForPreference = descriptionForPreference.substring(0, 600);
             }
             
-            log.info("📦 Item configurado: title={}, description={}, unitPrice={}", title, description, amount);
+            log.info("📦 Item configurado: title={}, description={}, unitPrice={}", title, descriptionForPreference, amount);
             
             items.add(
                     PreferenceItemRequest.builder()
                             .title(title)
-                            .description(description)
+                            .description(descriptionForPreference)
                             .quantity(1)
                             .unitPrice(amount)
                             .currencyId("PEN")
@@ -540,6 +618,28 @@ public class MercadoPagoService {
                             .currencyId("PEN")
                             .build());
             
+            // Añadir información del pagador (Payer)
+            PreferencePayerRequest payerRequest = null;
+            if (appointment.getPatient() != null && appointment.getPatient().getUser() != null) {
+                Patient patient = appointment.getPatient();
+                User user = patient.getUser();
+
+                log.info("🧑‍⚕️ Creando Payer con: name={}, surname={}, email={}, phone={}",
+                        patient.getFirstName(), patient.getLastName(), user.getEmail(), patient.getPhone());
+
+                payerRequest = PreferencePayerRequest.builder()
+                        .name(patient.getFirstName())
+                        .surname(patient.getLastName())
+                        .email(user.getEmail())
+                        .phone(PhoneRequest.builder()
+                                .areaCode("51") // Código de Perú
+                                .number(patient.getPhone())
+                                .build())
+                        .build();
+            } else {
+                log.warn("⚠️ No se pudo construir Payer: Faltan datos de Paciente o Usuario.");
+            }
+            
             // 8. CONFIGURAR URLS DE RETORNO CORRECTAMENTE
             String successUrl = "http://localhost:5173/payment/success?appointment_id=" + appointmentId;
             String failureUrl = "http://localhost:5173/payment/failure?appointment_id=" + appointmentId;
@@ -550,6 +650,7 @@ public class MercadoPagoService {
             // REQUEST CON URLs DE RETORNO
             PreferenceRequest request = PreferenceRequest.builder()
                     .items(items)
+                    .payer(payerRequest)
                     .externalReference(appointmentId.toString())
                     .backUrls(PreferenceBackUrlsRequest.builder()
                         .success(successUrl)
@@ -576,6 +677,65 @@ public class MercadoPagoService {
             }
             log.error("📄 Detalles: {}", errorDetails);
             throw new BusinessException("Error MP: " + apiEx.getMessage() + " - " + errorDetails);
+        }
+    }
+
+    @Transactional
+    public PaymentResponse processPayment(ProcessPaymentRequest request) throws MPException, MPApiException {
+        log.info("🚀 Procesando pago con Mercado Pago para cita ID: {}", request.getAppointmentId());
+
+        try {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                throw new BusinessException("Access token de Mercado Pago no configurado.");
+            }
+
+            PaymentClient client = new PaymentClient();
+
+            PaymentCreateRequest createRequest = PaymentCreateRequest.builder()
+                .transactionAmount(request.getTransactionAmount())
+                .token(request.getToken())
+                .installments(request.getInstallments())
+                .paymentMethodId(request.getPaymentMethodId())
+                .payer(PaymentPayerRequest.builder()
+                    .email(request.getPayer().getEmail())
+                    .identification(IdentificationRequest.builder()
+                        .type(request.getPayer().getIdentification().getType())
+                        .number(request.getPayer().getIdentification().getNumber())
+                        .build())
+                    .build())
+                .externalReference(request.getAppointmentId().toString())
+                .build();
+
+            com.mercadopago.resources.payment.Payment createdPayment = client.create(createRequest);
+            log.info("✅ Pago creado en Mercado Pago con ID: {}", createdPayment.getId());
+            log.info("ℹ️ Estado del pago: {}", createdPayment.getStatus());
+
+            if ("approved".equals(createdPayment.getStatus())) {
+                log.info("👍 Pago aprobado. Confirmando en el sistema...");
+                return paymentService.confirmPaymentByMp(request.getAppointmentId(), createdPayment.getId().toString());
+            } else {
+                log.warn("⚠️ El pago no fue aprobado. Estado: {}. Razón: {}", createdPayment.getStatus(), createdPayment.getStatusDetail());
+                // Aquí podrías marcar el pago como fallido si lo deseas
+                // paymentService.markPaymentAsFailed(payment.getId());
+                throw new BusinessException("El pago no fue aprobado por Mercado Pago. Estado: " + createdPayment.getStatus());
+            }
+
+        } catch (MPApiException apiEx) {
+            log.error("❌ ERROR DE API DE MERCADO PAGO al procesar pago: {}", apiEx.getApiResponse().getContent(), apiEx);
+            
+            // Extraer detalles específicos del error
+            String errorContent = apiEx.getApiResponse().getContent();
+            if (errorContent != null && errorContent.contains("Invalid users involved")) {
+                log.error("❌ ERROR DE USUARIOS INVÁLIDOS: Esto ocurre cuando los usuarios de prueba no están correctamente configurados en Mercado Pago");
+                log.error("ℹ️ SOLUCIÓN: Verifica que estás usando usuarios de prueba creados desde el panel de desarrollador de Mercado Pago");
+                throw new BusinessException("Error de configuración de usuarios de prueba en Mercado Pago: Invalid users involved. " +
+                                           "Debes usar usuarios de prueba específicos creados desde el panel de desarrollador.");
+            }
+            
+            throw apiEx;
+        } catch (MPException mpEx) {
+            log.error("❌ ERROR DE SDK DE MERCADO PAGO al procesar pago: {}", mpEx.getMessage(), mpEx);
+            throw mpEx;
         }
     }
 }

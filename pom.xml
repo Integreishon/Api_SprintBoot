@@ -113,12 +113,12 @@
 		</dependency>
 
 		<!-- Mercado Pago SDK -->
+		<!-- https://mvnrepository.com/artifact/com.mercadopago/sdk-java -->
 		<dependency>
-			<groupId>com.mercadopago</groupId>
-			<artifactId>sdk-java</artifactId>
-			<version>2.5.0</version>
+		    <groupId>com.mercadopago</groupId>
+		    <artifactId>sdk-java</artifactId>
+		    <version>2.5.0</version>
 		</dependency>
-
 		<!-- Development Tools -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

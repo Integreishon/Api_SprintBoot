@@ -15,6 +15,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.hospital.backend.auth.entity.User;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -38,6 +41,15 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.success("Pacientes recuperados exitosamente", patients));
     }
     
+    @GetMapping("/profile")
+    @PreAuthorize("hasRole('PATIENT')")
+    @Operation(summary = "Obtener perfil del paciente autenticado", description = "Recupera el perfil del paciente que ha iniciado sesión actualmente.")
+    public ResponseEntity<ApiResponse<PatientResponse>> getAuthenticatedPatientProfile(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        PatientResponse patient = patientService.findByUserId(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Perfil del paciente recuperado exitosamente", patient));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') || @patientService.validateUserCanAccessPatient(#id, principal.id)")
     @Operation(summary = "Obtener paciente por ID", description = "Recupera los datos de un paciente específico por su ID")
@@ -103,6 +115,16 @@ public class PatientController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Registro exitoso", createdPatient));
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("hasRole('PATIENT')")
+    @Operation(summary = "Actualizar perfil del paciente autenticado", description = "Actualiza los datos del perfil del paciente que ha iniciado sesión.")
+    public ResponseEntity<ApiResponse<PatientResponse>> updateAuthenticatedPatientProfile(
+            @Valid @RequestBody UpdatePatientRequest request, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        PatientResponse updatedPatient = patientService.updateByUserId(user.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success("Perfil actualizado exitosamente", updatedPatient));
     }
     
     @PutMapping("/{id}")

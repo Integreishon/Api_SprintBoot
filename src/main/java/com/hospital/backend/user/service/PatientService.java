@@ -118,6 +118,45 @@ public class PatientService {
     }
     
     @Transactional
+    public PatientResponse updateByUserId(Long userId, UpdatePatientRequest request) {
+        Patient patient = patientRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
+
+        // Actualizar datos del paciente
+        patient.setFirstName(request.getFirstName());
+        patient.setLastName(request.getLastName());
+        patient.setSecondLastName(request.getSecondLastName());
+        patient.setBirthDate(request.getBirthDate());
+        patient.setGender(request.getGender());
+        patient.setBloodType(request.getBloodType());
+        patient.setAddress(request.getAddress());
+        patient.setPhone(request.getPhone());
+        patient.setEmergencyContactName(request.getEmergencyContactName());
+        patient.setEmergencyContactPhone(request.getEmergencyContactPhone());
+        patient.setAllergies(request.getAllergies());
+        patient.setMedicalHistory(request.getMedicalHistory());
+
+        // Actualizar datos del usuario asociado (si es necesario)
+        User user = patient.getUser();
+        if (user != null) {
+            // Solo actualizar el email si se proporciona en la solicitud
+            if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+                // Verificar si el nuevo email ya existe
+                if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                    throw new BusinessException("El email '" + request.getEmail() + "' ya está en uso por otro usuario.");
+                }
+                user.setEmail(request.getEmail());
+                userRepository.save(user); // Guardar los cambios en el usuario
+            }
+        }
+
+        Patient updatedPatient = patientRepository.save(patient);
+        log.info("Patient with user ID: {} updated successfully", userId);
+
+        return mapToPatientResponse(updatedPatient);
+    }
+
+    @Transactional
     public PatientResponse update(Long id, UpdatePatientRequest request) {
         Patient patient = getPatientById(id);
         
@@ -204,7 +243,15 @@ public class PatientService {
         response.setId(patient.getId());
         response.setFirstName(patient.getFirstName());
         response.setLastName(patient.getLastName());
-        response.setFullName(patient.getFirstName() + " " + patient.getLastName());
+        response.setSecondLastName(patient.getSecondLastName());
+        
+        // Construir el nombre completo incluyendo el segundo apellido si está disponible
+        String fullName = patient.getFirstName() + " " + patient.getLastName();
+        if (patient.getSecondLastName() != null && !patient.getSecondLastName().isEmpty()) {
+            fullName += " " + patient.getSecondLastName();
+        }
+        response.setFullName(fullName);
+        
         response.setBirthDate(patient.getBirthDate());
         
         // Calcular edad si la fecha de nacimiento está disponible
@@ -221,9 +268,11 @@ public class PatientService {
         if (patient.getUser() != null) {
             response.setEmail(patient.getUser().getEmail());
             response.setUserId(patient.getUser().getId());
+            response.setDni(patient.getUser().getDni());
         } else {
             response.setEmail(null);
             response.setUserId(null);
+            response.setDni(null);
         }
         
         response.setEmergencyContactName(patient.getEmergencyContactName());

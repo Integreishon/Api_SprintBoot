@@ -21,47 +21,28 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
-    
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CorsConfigurationSource corsConfigurationSource) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.corsConfigurationSource = corsConfigurationSource;
+    }
+
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
-            .sessionManagement(session -> 
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/auth/**",
-                    "/api/v1/external/**",
-                    "/public/**",
-                    "/patients/register",
-                    "/patients/check-dni/**",
-                    "/document-types/**",
-                    "/specialties/**",
-                    "/doctors/specialty/**",
-                    "/payment-methods/**",
-                    "/chatbot/**",
-                    "/swagger-ui/**", "/swagger-ui.html",
-                    "/v3/api-docs/**", "/v3/api-docs/swagger-config",
-                    "/swagger-resources/**", "/webjars/**",
-                    "/actuator/**"
-                ).permitAll()
-                
-                .requestMatchers("/appointments/virtual").hasRole("PATIENT")
-                .requestMatchers("/appointments/me").hasRole("PATIENT")
-                .requestMatchers("/appointments/*/receipt").hasRole("PATIENT")
-                .requestMatchers("/reception/**").hasRole("RECEPTIONIST")
-                
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-            
-        return http.build();
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+             .csrf(AbstractHttpConfigurer::disable)
+             .cors(cors -> cors.configurationSource(corsConfigurationSource))
+             .sessionManagement(session -> 
+                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+             .authorizeHttpRequests(auth -> auth
+                 .anyRequest().permitAll()
+             )
+             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+             .build();
     }
     
     @Bean

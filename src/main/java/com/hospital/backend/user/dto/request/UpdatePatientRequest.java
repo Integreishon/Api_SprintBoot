@@ -21,6 +21,10 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UpdatePatientRequest {
     
+    @Email(message = "El formato del correo electrónico es inválido")
+    @NotBlank(message = "El correo electrónico es obligatorio")
+    private String email;
+    
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 100, message = "El nombre no puede exceder 100 caracteres")
     private String firstName;
