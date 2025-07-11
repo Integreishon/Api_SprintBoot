@@ -77,7 +77,7 @@ public class MedicalRecordService {
             endDate = LocalDate.parse(endDateStr, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
         }
 
-        List<MedicalRecord> records = medicalRecordRepository.findByUserIdWithDateFilter(patientId, startDate, endDate);
+        List<MedicalRecord> records = medicalRecordRepository.findByPatientIdWithDateFilter(patientId, startDate, endDate);
         return records.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

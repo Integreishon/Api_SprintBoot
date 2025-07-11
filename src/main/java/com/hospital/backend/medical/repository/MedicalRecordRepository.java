@@ -90,14 +90,14 @@ public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Lo
     Optional<MedicalRecord> findByAppointmentId(@Param("appointmentId") Long appointmentId);
     
     /**
-     * Buscar registros médicos por ID de USUARIO con filtros de fecha
+     * Buscar registros médicos por ID de PACIENTE con filtros de fecha
      */
     @Query("SELECT mr FROM MedicalRecord mr JOIN mr.appointment a JOIN a.patient p " +
-           "WHERE p.user.id = :userId " +
-           "AND (:startDate IS NULL OR a.appointmentDate >= :startDate) " +
-           "AND (:endDate IS NULL OR a.appointmentDate <= :endDate)")
-    List<MedicalRecord> findByUserIdWithDateFilter(
-            @Param("userId") Long userId,
+           "WHERE p.id = :patientId " +
+           "AND (:startDate IS NULL OR mr.recordDate >= :startDate) " +
+           "AND (:endDate IS NULL OR mr.recordDate <= :endDate)")
+    List<MedicalRecord> findByPatientIdWithDateFilter(
+            @Param("patientId") Long patientId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
     

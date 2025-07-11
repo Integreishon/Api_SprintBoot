@@ -151,7 +151,18 @@ public class PaymentService {
                     PaymentMethod mpMethod = paymentMethodRepository.findById(3L)
                             .orElseThrow(() -> new ResourceNotFoundException("PaymentMethod", "id", 3L));
                     newPayment.setPaymentMethod(mpMethod);
-                    newPayment.setAmount(appointment.getSpecialty().getFinalPrice()); // Usar el costo de la especialidad
+                    
+                    // Establecer el monto
+                    BigDecimal amount = appointment.getSpecialty().getFinalPrice(); // Usar el costo de la especialidad
+                    newPayment.setAmount(amount);
+                    
+                    // Calcular la comisión si aplica
+                    BigDecimal processingFee = calculateProcessingFee(amount, mpMethod);
+                    newPayment.setProcessingFee(processingFee);
+                    
+                    // Calcular el monto total (monto + comisión)
+                    newPayment.setTotalAmount(amount.add(processingFee != null ? processingFee : BigDecimal.ZERO));
+                    
                     newPayment.setStatus(PaymentStatus.PROCESSING);
                     return newPayment;
                 });
@@ -160,6 +171,14 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.COMPLETED);
         payment.setTransactionReference(transactionReference);
         payment.setPaymentDate(LocalDateTime.now());
+        
+        // Asegurarse de que el totalAmount esté calculado correctamente
+        if (payment.getTotalAmount() == null) {
+            BigDecimal amount = payment.getAmount();
+            BigDecimal processingFee = payment.getProcessingFee() != null ? payment.getProcessingFee() : BigDecimal.ZERO;
+            payment.setTotalAmount(amount.add(processingFee));
+            log.info("Calculando totalAmount para el pago: {} + {} = {}", amount, processingFee, payment.getTotalAmount());
+        }
 
         appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         appointment.setStatus(AppointmentStatus.SCHEDULED);

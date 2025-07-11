@@ -7,6 +7,8 @@ import com.hospital.backend.common.exception.ResourceNotFoundException;
 import com.hospital.backend.enums.AppointmentStatus;
 import com.hospital.backend.enums.PaymentStatus;
 import com.hospital.backend.payment.entity.Payment;
+import com.hospital.backend.payment.entity.PaymentDetail;
+import com.hospital.backend.payment.repository.PaymentDetailRepository;
 import com.hospital.backend.payment.repository.PaymentRepository;
 import com.hospital.backend.user.entity.Patient;
 import com.hospital.backend.auth.entity.User;
@@ -27,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -42,6 +45,8 @@ public class MercadoPagoService {
     private final AppointmentRepository appointmentRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    @Autowired
+    private PaymentDetailRepository paymentDetailRepository;
 
     @Value("${server.servlet.context-path}")
     private String apiBasePath;
@@ -712,7 +717,12 @@ public class MercadoPagoService {
 
             if ("approved".equals(createdPayment.getStatus())) {
                 log.info("👍 Pago aprobado. Confirmando en el sistema...");
-                return paymentService.confirmPaymentByMp(request.getAppointmentId(), createdPayment.getId().toString());
+                PaymentResponse paymentResponse = paymentService.confirmPaymentByMp(request.getAppointmentId(), createdPayment.getId().toString());
+                
+                // Guardar detalles adicionales del pago
+                savePaymentDetails(paymentResponse.getId(), createdPayment, request);
+                
+                return paymentResponse;
             } else {
                 log.warn("⚠️ El pago no fue aprobado. Estado: {}. Razón: {}", createdPayment.getStatus(), createdPayment.getStatusDetail());
                 // Aquí podrías marcar el pago como fallido si lo deseas
@@ -736,6 +746,53 @@ public class MercadoPagoService {
         } catch (MPException mpEx) {
             log.error("❌ ERROR DE SDK DE MERCADO PAGO al procesar pago: {}", mpEx.getMessage(), mpEx);
             throw mpEx;
+        }
+    }
+    
+    /**
+     * Guarda los detalles adicionales de un pago de Mercado Pago
+     */
+    private void savePaymentDetails(Long paymentId, com.mercadopago.resources.payment.Payment mpPayment, ProcessPaymentRequest request) {
+        try {
+            log.info("📝 Guardando detalles adicionales del pago ID: {}", paymentId);
+            
+            // Buscar el pago por ID
+            Payment payment = paymentRepository.findById(paymentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", paymentId));
+            
+            // Crear el detalle del pago
+            PaymentDetail paymentDetail = new PaymentDetail();
+            paymentDetail.setPayment(payment);
+            paymentDetail.setProcessorName("Mercado Pago");
+            paymentDetail.setProcessorTransactionId(mpPayment.getId().toString());
+            paymentDetail.setPaymentMethodDetail(request.getPaymentMethodId());
+            
+            // Información de tarjeta si está disponible
+            if (mpPayment.getCard() != null) {
+                paymentDetail.setCardLastDigits(mpPayment.getCard().getLastFourDigits());
+                paymentDetail.setCardType(mpPayment.getCard().getCardholder().getName());
+            }
+            
+            // Información del banco emisor
+            paymentDetail.setIssuerBank(request.getIssuerId());
+            
+            // Cuotas
+            paymentDetail.setInstallments(request.getInstallments());
+            
+            // Moneda
+            paymentDetail.setCurrency("PEN"); // Soles peruanos
+            
+            // Estado detallado
+            paymentDetail.setTransactionStatus(mpPayment.getStatus());
+            paymentDetail.setResponseCode(mpPayment.getStatusDetail());
+            
+            // Guardar el detalle
+            paymentDetailRepository.save(paymentDetail);
+            
+            log.info("✅ Detalles de pago guardados correctamente");
+        } catch (Exception e) {
+            // No queremos que un error aquí afecte la transacción principal
+            log.error("❌ Error al guardar detalles del pago: {}", e.getMessage(), e);
         }
     }
 }

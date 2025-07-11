@@ -8,9 +8,11 @@ import com.hospital.backend.payment.dto.request.CreatePaymentRequest;
 import com.hospital.backend.payment.dto.request.CreatePreferenceRequest;
 import com.hospital.backend.payment.dto.request.ProcessPaymentRequest;
 import com.hospital.backend.payment.dto.response.PaymentResponse;
+import com.hospital.backend.payment.dto.response.PaymentDetailResponse;
 import com.hospital.backend.payment.dto.response.PaymentSummaryResponse;
 import com.hospital.backend.payment.service.PaymentService;
 import com.hospital.backend.payment.service.MercadoPagoService;
+import com.hospital.backend.payment.service.PaymentDetailService;
 import com.hospital.backend.appointment.entity.Appointment;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
@@ -44,6 +46,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final MercadoPagoService mercadoPagoService;
+    private final PaymentDetailService paymentDetailService;
     private final com.hospital.backend.appointment.repository.AppointmentRepository appointmentRepository;
     
     // =========================
@@ -451,5 +454,29 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Error en versión original: " + e.getMessage()));
         }
+    }
+
+    @Operation(summary = "Obtener detalles de un pago")
+    @GetMapping("/{id}/details")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST', 'PATIENT')")
+    public ResponseEntity<ApiResponse<PaymentDetailResponse>> getPaymentDetails(@PathVariable Long id) {
+        log.info("GET /api/payments/{}/details - Obteniendo detalles del pago", id);
+        
+        // Verificar que el pago existe
+        paymentService.getPayment(id); // Esto lanzará una excepción si el pago no existe
+        
+        // Verificar si hay detalles para este pago
+        if (!paymentDetailService.hasPaymentDetail(id)) {
+            return ResponseEntity.ok(
+                ApiResponse.error("No hay detalles disponibles para este pago")
+            );
+        }
+        
+        // Obtener los detalles
+        PaymentDetailResponse details = paymentDetailService.getPaymentDetailByPaymentId(id);
+        
+        return ResponseEntity.ok(
+            ApiResponse.success("Detalles de pago obtenidos exitosamente", details)
+        );
     }
 }
